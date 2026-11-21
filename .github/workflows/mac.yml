@@ -1,0 +1,73 @@
+# Builds the macOS app and installer on GitHub's Macs, for Apple Silicon and Intel.
+# Runs by hand (Actions → Mac build → Run workflow) and for every version tag. The .dmg, the
+# updater archive (.app.tar.gz) and its signature come out as workflow artifacts; publishing them
+# to a release is a separate, deliberate step.
+name: Mac build
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-15
+            target: aarch64-apple-darwin
+            label: apple-silicon
+          - runner: macos-15-intel
+            target: x86_64-apple-darwin
+            label: intel
+    runs-on: ${{ matrix.runner }}
+    name: ${{ matrix.label }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri -> target
+          key: ${{ matrix.target }}
+
+      - run: npm ci
+
+      - name: Bundled ffmpeg
+        run: node scripts/fetch-ffmpeg.mjs
+        env:
+          MORF_FFMPEG_TARGET: ${{ matrix.target }}
+
+      - name: Build
+        run: npx tauri build --target ${{ matrix.target }}
+        env:
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
+
+      - name: Check the app runs
+        run: |
+          app="src-tauri/target/${{ matrix.target }}/release/bundle/macos/Morf.app"
+          "$app/Contents/MacOS/morf" --cli formats | head -5
+          "$app/Contents/MacOS/ffmpeg" -hide_banner -version | head -1
+          codesign -dv "$app" 2>&1 | grep -E "Signature|Identifier" || true
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: morf-mac-${{ matrix.label }}
+          path: |
+            src-tauri/target/${{ matrix.target }}/release/bundle/dmg/*.dmg
+            src-tauri/target/${{ matrix.target }}/release/bundle/macos/*.tar.gz
+            src-tauri/target/${{ matrix.target }}/release/bundle/macos/*.tar.gz.sig
+          if-no-files-found: error

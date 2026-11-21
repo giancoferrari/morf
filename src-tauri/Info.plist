@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>NSMicrophoneUsageDescription</key>
+  <string>Morf listens while you hold the dictation shortcut, and turns your words into text on this Mac.</string>
+  <key>NSAppleEventsUsageDescription</key>
+  <string>Morf types your dictation into the app you're using.</string>
+</dict>
+</plist>

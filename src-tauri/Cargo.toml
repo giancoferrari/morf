@@ -59,6 +59,10 @@ tauri-plugin-autostart = "2"
 [target.'cfg(windows)'.dependencies]
 winreg = "0.56"
 
+# On Macs, dictation runs on the graphics chip through Metal, as in Handy.
+[target.'cfg(target_os = "macos")'.dependencies]
+transcribe-cpp = { version = "0.4.2", default-features = false, features = ["metal"] }
+
 [profile.release]
 codegen-units = 1
 lto = "thin"

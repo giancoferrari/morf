@@ -13,9 +13,22 @@
         "decorations": true,
         "titleBarStyle": "Overlay",
         "hiddenTitle": true,
-        "trafficLightPosition": { "x": 20, "y": 22 },
+        "trafficLightPosition": {
+          "x": 20,
+          "y": 22
+        },
         "dragDropEnabled": true
       }
     ]
+  },
+  "bundle": {
+    "targets": [
+      "app",
+      "dmg"
+    ],
+    "macOS": {
+      "signingIdentity": "-",
+      "minimumSystemVersion": "13.0"
+    }
   }
 }
