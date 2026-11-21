@@ -137,6 +137,40 @@ await js(`window.dispatchEvent(new KeyboardEvent('keydown', { key: '3', ctrlKey:
 await sleep(7000)
 await shot("count")
 
+// Dictate.
+await fresh({ theme: "light", indexView: "list" })
+await js(`window.dispatchEvent(new KeyboardEvent('keydown', { key: '4', ctrlKey: true })); true`)
+await sleep(1500)
+await shot("dictate")
+
+// Compare, with two versions of a paragraph.
+await fresh(
+  { theme: "light", indexView: "list" },
+  {
+    "morf.compare.a": `The studio opens at nine on weekdays.
+Coffee is in the kitchen on the second floor.
+Please book the meeting room a day ahead.`,
+    "morf.compare.b": `The studio opens at half past eight on weekdays.
+Coffee is in the kitchen on the second floor.
+Please book the meeting room two days ahead, using the shared calendar.`,
+  },
+)
+await js(`window.dispatchEvent(new KeyboardEvent('keydown', { key: '7', ctrlKey: true })); true`)
+await sleep(1200)
+await shot("compare")
+
+// QR.
+await fresh({ theme: "light", indexView: "list" }, { "morf.qr.form": { kind: "link", link: "https://github.com/giancoferrari/morf" } })
+await js(`window.dispatchEvent(new KeyboardEvent('keydown', { key: '8', ctrlKey: true })); true`)
+await sleep(1200)
+await shot("qr")
+
+// Palette, in dark mode.
+await fresh({ theme: "dark", indexView: "list" }, { "morf.palette.current": "#2F6F5E" })
+await js(`window.dispatchEvent(new KeyboardEvent('keydown', { key: '9', ctrlKey: true })); true`)
+await sleep(1200)
+await shot("palette-dark")
+
 ws.close()
 chrome.kill()
 await sleep(500)

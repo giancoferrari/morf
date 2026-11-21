@@ -47,7 +47,7 @@ export function SettingsDialog({ open, onOpenChange }: { open: boolean; onOpenCh
               title="Settings"
               footer={
                 <div className="label px-2 text-ink-4">
-                  Morf 0.1.0
+                  Morf 0.2.0
                   <br />
                   Runs on this computer
                 </div>
@@ -125,7 +125,7 @@ export function SettingsDialog({ open, onOpenChange }: { open: boolean; onOpenCh
                       if (f) setPref("outputFolder", f)
                     }}
                   >
-                    {prefs.outputFolder ? `Change (${basename(prefs.outputFolder)})` : "Choose…"}
+                    {prefs.outputFolder ? `Change (${basename(prefs.outputFolder)})` : "Chooseâ€¦"}
                   </Button>
                 </SettingsRow>
               </SettingsGroup>
@@ -167,10 +167,10 @@ export function SettingsDialog({ open, onOpenChange }: { open: boolean; onOpenCh
                   label="ffmpeg"
                   description={
                     status?.ffmpeg
-                      ? `${status.ffmpeg.version} · ${status.ffmpeg.bundled ? "bundled" : status.ffmpeg.path}`
+                      ? `${status.ffmpeg.version} Â· ${status.ffmpeg.bundled ? "bundled" : status.ffmpeg.path}`
                       : status
                         ? "Not found. Reinstall Morf, or run: winget install Gyan.FFmpeg"
-                        : "Checking…"
+                        : "Checkingâ€¦"
                   }
                 >
                   <span
@@ -179,7 +179,7 @@ export function SettingsDialog({ open, onOpenChange }: { open: boolean; onOpenCh
                       status?.ffmpeg ? "bg-paper-2 text-ok" : "bg-paper-2 text-signal",
                     )}
                   >
-                    {status?.ffmpeg ? "Ready" : status ? "Missing" : "…"}
+                    {status?.ffmpeg ? "Ready" : status ? "Missing" : "â€¦"}
                   </span>
                 </SettingsRow>
                 <SettingsRow

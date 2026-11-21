@@ -47,6 +47,13 @@ pub struct Settings {
     pub audio_format: Option<String>,
     pub max_dimension: Option<String>,
     pub strip_metadata: Option<bool>,
+    // resize
+    pub resize_mode: Option<String>,
+    pub width: Option<u32>,
+    pub height: Option<u32>,
+    pub percent: Option<f64>,
+    pub background: Option<String>,
+    pub format: Option<String>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -250,6 +257,7 @@ async fn run(req: &JobRequest, cancel: &Cancel, rep: Arc<Reporter>) -> Result<Ou
             Ok(Outcome { output: Some(out), out_size: size, fallback, note: None })
         }
         "compress" => compress(req, &info, &input, &dir, &stem, fallback, cancel, &prog).await,
+        "resize" => resize(req, &input, &dir, &stem, fallback, cancel, &prog).await,
         other => bail!("Unknown operation {other}"),
     }
 }
@@ -457,7 +465,7 @@ async fn compress(req: &JobRequest, info: &probe::FileInfo, input: &Path, dir: &
             for (i, lv) in levels.iter().enumerate() {
                 let (inp, outp, c, strip) = (input.to_path_buf(), part.clone(), cancel.clone(), st.strip_metadata.unwrap_or(true));
                 let lv = *lv;
-                tauri::async_runtime::spawn_blocking(move || pdf::compress(&inp, &outp, lv, strip, &c, &|_| {})).await??;
+                tauri::async_runtime::spawn_blocking(move || pdf::compress(&inp, &outp, lv, strip, &c, &|_| {}).map(|_| ())).await??;
                 prog((i + 1) as f64 / levels.len() as f64 * 0.95);
                 let size = std::fs::metadata(&part)?.len();
                 if target_bytes.map_or(true, |t| size <= t) {
@@ -485,6 +493,88 @@ async fn compress(req: &JobRequest, info: &probe::FileInfo, input: &Path, dir: &
     let out = paths::commit(&part_path, &final_path)?;
     guard.done = true;
     Ok(Outcome { output: Some(out), out_size: size, fallback, note: None })
+}
+
+/// Resize: fit inside a box, fill it exactly (cropping the overflow), pad it exactly (adding a
+/// border), or scale by a percentage. Never enlarges unless the box asks for it.
+async fn resize(req: &JobRequest, input: &Path, dir: &Path, stem: &str, fallback: bool, cancel: &Cancel, prog: &(dyn Fn(f64) + Sync)) -> Result<Outcome> {
+    use image::{imageops::FilterType, GenericImageView, Rgba, RgbaImage};
+    let st = req.settings.clone();
+    let picture = crate::extra::load_any(input).await?;
+    cancel.check()?;
+    prog(0.3);
+    let mode = st.resize_mode.clone().unwrap_or_else(|| "fit".into());
+    let in_ext = paths::ext_of(input);
+    let (ow, oh) = picture.dimensions();
+    let (tw, th) = match mode.as_str() {
+        "percent" => {
+            let p = st.percent.unwrap_or(50.0).clamp(1.0, 1000.0) / 100.0;
+            (((ow as f64) * p).round().max(1.0) as u32, ((oh as f64) * p).round().max(1.0) as u32)
+        }
+        _ => (st.width.unwrap_or(0), st.height.unwrap_or(0)),
+    };
+    if tw == 0 && th == 0 {
+        bail!("Set a width or a height.");
+    }
+    // A missing side follows the picture's proportions.
+    let tw = if tw == 0 { ((th as f64) * ow as f64 / oh as f64).round() as u32 } else { tw };
+    let th = if th == 0 { ((tw as f64) * oh as f64 / ow as f64).round() as u32 } else { th };
+    let bg = st.background.clone().unwrap_or_else(|| "transparent".into());
+    let fmt = match st.format.as_deref().unwrap_or("keep") {
+        "keep" => match in_ext.as_str() {
+            "jpg" | "jpeg" => "jpeg",
+            "webp" => "webp",
+            "png" | "gif" | "bmp" | "tif" | "tiff" | "ico" => "png",
+            _ => "jpeg",
+        },
+        f => f,
+    }
+    .to_string();
+    let quality = st.image_quality.unwrap_or(88).clamp(30, 100) as u8;
+    let (mode2, bg2, fmt2) = (mode.clone(), bg.clone(), fmt.clone());
+    let (bytes, w, h) = tauri::async_runtime::spawn_blocking(move || -> Result<(Vec<u8>, u32, u32)> {
+        let out = match mode2.as_str() {
+            "fill" => picture.resize_to_fill(tw, th, FilterType::Lanczos3),
+            "pad" => {
+                let inner = picture.resize(tw, th, FilterType::Lanczos3);
+                let color = match bg2.as_str() {
+                    "white" => Rgba([255, 255, 255, 255]),
+                    "black" => Rgba([0, 0, 0, 255]),
+                    _ if fmt2 == "jpeg" => Rgba([255, 255, 255, 255]),
+                    _ => Rgba([0, 0, 0, 0]),
+                };
+                let mut canvas = RgbaImage::from_pixel(tw, th, color);
+                let (iw, ih) = inner.dimensions();
+                image::imageops::overlay(&mut canvas, &inner.to_rgba8(), ((tw - iw) / 2) as i64, ((th - ih) / 2) as i64);
+                image::DynamicImage::ImageRgba8(canvas)
+            }
+            "percent" => picture.resize_exact(tw, th, FilterType::Lanczos3),
+            _ => {
+                // Fit: inside the box, keeping proportions; never enlarged.
+                if ow <= tw && oh <= th { picture } else { picture.resize(tw, th, FilterType::Lanczos3) }
+            }
+        };
+        let (w, h) = out.dimensions();
+        let bytes = match fmt2.as_str() {
+            "png" => crate::img::encode_png(&out, 2)?,
+            "webp" => crate::img::encode_webp(&out, Some(quality as f32))?,
+            _ => crate::img::encode_jpeg(&out, quality)?,
+        };
+        Ok((bytes, w, h))
+    })
+    .await??;
+    cancel.check()?;
+    prog(0.9);
+    let ext = match fmt.as_str() {
+        "png" => "png",
+        "webp" => "webp",
+        _ => "jpg",
+    };
+    let final_path = paths::unique_path(dir, &format!("{stem} ({w}x{h})"), ext);
+    let part = paths::part_path(&final_path);
+    std::fs::write(&part, &bytes)?;
+    let out = paths::commit(&part, &final_path)?;
+    Ok(Outcome { output: Some(out), out_size: bytes.len() as u64, fallback, note: None })
 }
 
 fn human(b: u64) -> String {

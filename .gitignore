@@ -29,3 +29,9 @@ src-tauri/binaries/ffmpeg-*
 # Local tooling
 .claude/
 src-tauri/binaries/FFMPEG-LICENSE.txt
+
+# Copied from node_modules by scripts/copy-vendor.mjs
+public/vendor/
+
+# Local test fixtures
+dev-fixtures/

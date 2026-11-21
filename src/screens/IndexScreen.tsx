@@ -186,12 +186,12 @@ function GridIndex({
         </div>
       </div>
       {/* Type-only tiles: number, name, one line. Hairlines carry the grid. */}
-      <div className="grid grid-cols-2 gap-px border-y border-hair bg-hair md:grid-cols-3 xl:grid-cols-4">
+      <div className="grid grid-cols-2 border-t border-l border-hair md:grid-cols-3 xl:grid-cols-4">
         {tools.map((t, i) => (
           <button
             key={t.id}
             onClick={() => onOpen(t.id)}
-            className="group focus-ring anim-rise flex min-h-[220px] flex-col justify-between gap-6 bg-paper p-5 text-left transition-colors duration-200 hover:bg-paper-2"
+            className="group focus-ring anim-rise flex min-h-[220px] flex-col justify-between gap-6 border-r border-b border-hair p-5 text-left transition-colors duration-200 hover:bg-paper-2"
             style={{ animationDelay: `${i * 30}ms` }}
           >
             <span className="label flex w-full justify-between text-ink-4">

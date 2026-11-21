@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { Dialog } from "@base-ui/react/dialog"
 import { CommandPalette } from "@/components/shell/CommandPalette"
+import { SavedToast } from "@/components/shell/SavedToast"
 import { SettingsDialog } from "@/components/shell/SettingsDialog"
 import { TitleBar } from "@/components/shell/TitleBar"
 import { inspect, onOpenFiles, onWindowDrop, type FileInfo } from "@/lib/engine"
@@ -12,8 +13,21 @@ import { cn } from "@/lib/utils"
 import { CompressScreen } from "@/screens/CompressScreen"
 import { ConvertScreen } from "@/screens/ConvertScreen"
 import { CountScreen } from "@/screens/CountScreen"
+import { CompareScreen } from "@/screens/CompareScreen"
+import { CutoutScreen } from "@/screens/CutoutScreen"
+import { DictateScreen } from "@/screens/DictateScreen"
+import { PaletteScreen } from "@/screens/PaletteScreen"
+import { QrScreen } from "@/screens/QrScreen"
+import { ReadScreen } from "@/screens/ReadScreen"
+import { RenameScreen } from "@/screens/RenameScreen"
+import { ResizeScreen } from "@/screens/ResizeScreen"
 import { IndexScreen } from "@/screens/IndexScreen"
 import { SoonScreen } from "@/screens/SoonScreen"
+
+/** Tools that handle dropped files on their own screen. */
+const SELF_DROP = new Set<ToolId>(["rename", "diff", "qr", "palette", "ocr", "cutout"])
+/** Tools whose screen shows its own drop target, so the full-window hint isn't needed. */
+const OWN_DROP_UI = new Set<ToolId>(["convert", "compress", "resize", ...SELF_DROP])
 
 export default function App() {
   useApplyTheme()
@@ -62,6 +76,12 @@ export default function App() {
   const routeFiles = useCallback(async (paths: string[], tool: string | null) => {
     if (!paths.length) return
     const target = (tool as ToolId | null) ?? routeRef.current
+    // These tools listen for drops themselves.
+    if (target && SELF_DROP.has(target)) return
+    if (target === "resize") {
+      await addPaths("resize", paths)
+      return
+    }
     if (target === "convert" || target === "compress") {
       setRoute(target)
       await addPaths(target, paths)
@@ -90,6 +110,14 @@ export default function App() {
     if (route === "convert") return <ConvertScreen dragging={dragging} />
     if (route === "compress") return <CompressScreen dragging={dragging} />
     if (route === "count") return <CountScreen />
+    if (route === "transcribe") return <DictateScreen />
+    if (route === "resize") return <ResizeScreen dragging={dragging} />
+    if (route === "rename") return <RenameScreen />
+    if (route === "diff") return <CompareScreen />
+    if (route === "qr") return <QrScreen />
+    if (route === "palette") return <PaletteScreen />
+    if (route === "ocr") return <ReadScreen />
+    if (route === "cutout") return <CutoutScreen />
     return <SoonScreen id={route} onBack={() => open(null)} />
   })()
 
@@ -99,7 +127,7 @@ export default function App() {
       <div key={route ?? "index"} className="anim-fade relative min-h-0 flex-1">
         {screen}
         {/* On screens without their own drop target, show a full-window hint. */}
-        {dragging && (route === null || (route !== "convert" && route !== "compress")) ? (
+        {dragging && (route === null || !OWN_DROP_UI.has(route)) ? (
           <div className="anim-fade pointer-events-none absolute inset-3 z-40 grid place-items-center rounded-2xl border border-dashed border-ink/30 bg-paper/85 backdrop-blur-sm">
             <p className="display text-[clamp(56px,8vw,120px)]">Let go</p>
           </div>
@@ -114,6 +142,7 @@ export default function App() {
         onToggleTheme={toggleTheme}
       />
       <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
+      <SavedToast />
       <ChooseTool
         pending={pending}
         onClose={() => setPending(null)}
@@ -122,7 +151,7 @@ export default function App() {
           setPending(null)
           if (!p) return
           setRoute(id)
-          if (id === "convert" || id === "compress") await addPaths(id, p.paths)
+          if (id === "convert" || id === "compress" || id === "resize") await addPaths(id, p.paths)
         }}
       />
     </div>
@@ -141,13 +170,16 @@ function ChooseTool({
 }) {
   const n = pending?.paths.length ?? 0
   const kinds = new Set(pending?.infos.map((i) => i.kind))
-  const choices: ToolId[] = ["convert", "compress"]
+  const onlyImages = !!pending && pending.infos.every((i) => i.kind === "image")
+  const choices: ToolId[] = onlyImages ? ["convert", "compress", "resize"] : ["convert", "compress"]
   const reason = (id: ToolId) =>
     id === "convert"
       ? kinds.has("pdf") || kinds.has("document") || kinds.has("font")
         ? "Change the format (PDF, documents and fonts are coming)"
         : "Change the format"
-      : "Make them smaller"
+      : id === "resize"
+        ? "Change the dimensions"
+        : "Make them smaller"
   return (
     <Dialog.Root open={!!pending} onOpenChange={(o) => !o && onClose()}>
       <Dialog.Portal>

@@ -1,6 +1,6 @@
 [package]
 name = "morf"
-version = "0.1.0"
+version = "0.2.0"
 description = "Morf: convert, compress and count, all on your computer."
 authors = ["Morf contributors"]
 license = "GPL-3.0-or-later"
@@ -16,9 +16,10 @@ crate-type = ["staticlib", "cdylib", "rlib"]
 tauri-build = { version = "2", features = [] }
 
 [dependencies]
-tauri = { version = "2", features = ["protocol-asset"] }
+tauri = { version = "2", features = ["protocol-asset", "tray-icon", "image-png"] }
 tauri-plugin-dialog = "2"
 tauri-plugin-opener = "2"
+tauri-plugin-notification = "2"
 tauri-plugin-single-instance = "2"
 tauri-plugin-log = "2"
 log = "0.4"
@@ -33,9 +34,22 @@ imagequant = { version = "4", default-features = false, features = ["threads"] }
 webp = { version = "0.3", default-features = false }
 lopdf = { version = "0.47", default-features = false }
 flate2 = "1"
+zune-jpeg = "0.5"
+zune-core = "0.5"
 trash = "5"
 dirs = "7"
 which = "8"
+# Dictation, after Handy (MIT): microphone capture, voice activity detection, the transcribe.cpp
+# engine with GGUF models, a global shortcut, and pasting into the focused app.
+handy-recorder = "0.1.1"
+earshot = "1.2"
+transcribe-cpp = { version = "0.4.2", default-features = false }
+tauri-plugin-global-shortcut = "2"
+enigo = "0.6"
+arboard = "3"
+ureq = "3"
+sha2 = "0.10"
+base64 = "0.22"
 
 [target.'cfg(windows)'.dependencies]
 winreg = "0.56"

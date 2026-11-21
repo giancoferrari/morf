@@ -83,11 +83,18 @@ export interface JobSettings {
   audioFormat?: "keep" | "opus" | "aac" | "mp3"
   maxDimension?: string
   stripMetadata?: boolean
+  // resize
+  resizeMode?: "fit" | "fill" | "pad" | "percent"
+  width?: number | null
+  height?: number | null
+  percent?: number
+  background?: "transparent" | "white" | "black"
+  format?: "keep" | "jpeg" | "png" | "webp"
 }
 
 export interface JobRequest {
   jobId: string
-  op: "convert" | "compress"
+  op: "convert" | "compress" | "resize"
   path: string
   target?: string
   settings: JobSettings
@@ -356,4 +363,183 @@ export async function fileUrl(path: string): Promise<string | null> {
   }
   const f = mockFiles.get(path)
   return f ? URL.createObjectURL(f) : null
+}
+
+/* -------------------------------------------------------------------------------------------------
+ * Dictation
+ * -----------------------------------------------------------------------------------------------*/
+
+export interface DictationSettings {
+  enabled: boolean
+  model: string
+  shortcut: string
+  mode: "auto" | "hold" | "toggle"
+  language: string
+  output: "paste" | "copy"
+  removeFillers: boolean
+  sounds: boolean
+  overlay: boolean
+  microphone: string | null
+  vocabulary: string[]
+}
+
+export interface SpeechModel {
+  id: string
+  name: string
+  description: string
+  languages: string
+  size: number
+  recommended: boolean
+  downloaded: boolean
+}
+
+export interface DictationEvent {
+  state: "idle" | "recording" | "transcribing" | "done" | "error"
+  level?: number
+  text?: string
+  error?: string
+}
+
+export interface ModelDownloadEvent {
+  id: string
+  state: "downloading" | "done" | "failed" | "cancelled"
+  received: number
+  total: number
+  error?: string
+}
+
+export interface HistoryItem {
+  text: string
+  at: number
+  seconds: number
+  model: string
+}
+
+const MOCK_DICTATION: DictationSettings = {
+  enabled: false,
+  model: "parakeet-tdt-0.6b-v3",
+  shortcut: "ctrl+space",
+  mode: "auto",
+  language: "auto",
+  output: "paste",
+  removeFillers: true,
+  sounds: true,
+  overlay: true,
+  microphone: null,
+  vocabulary: [],
+}
+
+const MOCK_MODELS: SpeechModel[] = [
+  { id: "parakeet-tdt-0.6b-v3", name: "Parakeet V3", description: "Fast and accurate. The best pick for most people.", languages: "25 European languages, detected automatically", size: 739_508_576, recommended: true, downloaded: true },
+  { id: "parakeet-tdt_ctc-110m", name: "Parakeet Tiny", description: "Virtually instant, even on older computers.", languages: "English", size: 135_373_280, recommended: false, downloaded: false },
+  { id: "whisper-small", name: "Whisper Small", description: "Many languages in a small download.", languages: "99 languages", size: 269_751_136, recommended: false, downloaded: false },
+  { id: "whisper-large-v3-turbo", name: "Whisper Large Turbo", description: "Most accurate across languages. Slower without a graphics card.", languages: "100 languages", size: 886_381_760, recommended: false, downloaded: false },
+]
+
+let mockDictation = { ...MOCK_DICTATION }
+
+export const dictation = {
+  settings: (): Promise<DictationSettings> => (inTauri ? invoke("dictation_settings") : Promise.resolve(mockDictation)),
+  save: async (settings: DictationSettings): Promise<void> => {
+    if (inTauri) return invoke("set_dictation_settings", { settings })
+    mockDictation = settings
+  },
+  models: (): Promise<SpeechModel[]> => (inTauri ? invoke("dictation_models") : Promise.resolve(MOCK_MODELS)),
+  download: (id: string): Promise<void> => (inTauri ? invoke("download_model", { id }) : Promise.resolve()),
+  cancelDownload: (): Promise<void> => (inTauri ? invoke("cancel_model_download") : Promise.resolve()),
+  remove: (id: string): Promise<void> => (inTauri ? invoke("delete_model", { id }) : Promise.resolve()),
+  toggle: (): Promise<void> => (inTauri ? invoke("dictation_toggle") : Promise.resolve()),
+  cancel: (): Promise<void> => (inTauri ? invoke("dictation_cancel") : Promise.resolve()),
+  history: (): Promise<HistoryItem[]> =>
+    inTauri
+      ? invoke("dictation_history")
+      : Promise.resolve([
+          { text: "Can we move the review to Thursday afternoon? The new cuts aren't back from the colourist yet.", at: Date.now() / 1000 - 600, seconds: 6.2, model: "parakeet-tdt-0.6b-v3" },
+          { text: "Remember to export the poster at three hundred dpi for the printer.", at: Date.now() / 1000 - 3600, seconds: 3.8, model: "parakeet-tdt-0.6b-v3" },
+        ]),
+  clearHistory: (): Promise<void> => (inTauri ? invoke("clear_dictation_history") : Promise.resolve()),
+  microphones: (): Promise<{ id: string; name: string; isDefault: boolean }[]> =>
+    inTauri ? invoke("list_microphones") : Promise.resolve([{ id: "default", name: "Microphone Array (Realtek)", isDefault: true }]),
+  transcribeFile: (path: string, model: string, language: string): Promise<{ text: string; txt: string; srt: string | null }> =>
+    inTauri ? invoke("transcribe_file", { path, model, language }) : Promise.resolve({ text: "(browser preview)", txt: path + ".txt", srt: null }),
+  onEvent: async (cb: (e: DictationEvent) => void): Promise<UnlistenFn> =>
+    inTauri ? listen<DictationEvent>("morf://dictation", (e) => cb(e.payload)) : () => {},
+  onDownload: async (cb: (e: ModelDownloadEvent) => void): Promise<UnlistenFn> =>
+    inTauri ? listen<ModelDownloadEvent>("morf://model", (e) => cb(e.payload)) : () => {},
+}
+
+/* -------------------------------------------------------------------------------------------------
+ * Lighter tools
+ * -----------------------------------------------------------------------------------------------*/
+
+const toBase64 = (bytes: Uint8Array): string => {
+  let s = ""
+  for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode(...bytes.subarray(i, i + 0x8000))
+  return btoa(s)
+}
+
+/** Browser preview only: download instead of writing to disk. */
+function browserDownload(name: string, data: Uint8Array | string, type = "application/octet-stream") {
+  const blob = new Blob([typeof data === "string" ? data : (data as BlobPart)], { type })
+  const a = document.createElement("a")
+  a.href = URL.createObjectURL(blob)
+  a.download = name
+  a.click()
+}
+
+export const files = {
+  /** A URL the window can show for any image, converting HEIC/TIFF/RAW first. */
+  previewUrl: async (path: string): Promise<string | null> => {
+    if (!inTauri) return import.meta.env.DEV && path.startsWith("/_test/") ? path : fileUrl(path)
+    // Raw bytes into a blob: same origin as the window, so canvases can read the pixels.
+    const bytes = await invoke<ArrayBuffer>("image_bytes", { path })
+    return URL.createObjectURL(new Blob([bytes]))
+  },
+  bytes: async (path: string): Promise<ArrayBuffer> => {
+    if (inTauri) return invoke<ArrayBuffer>("file_bytes", { path })
+    // Design-time fixtures (public/_test, git-ignored) stand in for files on disk.
+    if (import.meta.env.DEV && path.startsWith("/_test/")) return (await fetch(path)).arrayBuffer()
+    const f = mockFiles.get(path)
+    return f ? f.arrayBuffer() : new ArrayBuffer(0)
+  },
+  readText: async (path: string): Promise<string> => {
+    if (inTauri) return invoke("read_text", { path })
+    const f = mockFiles.get(path)
+    return f ? f.text() : ""
+  },
+  /** Ask where to save, then write. Returns the path, or null if cancelled. */
+  saveAs: async (suggested: string, data: Uint8Array | string, filters?: { name: string; extensions: string[] }[]): Promise<string | null> => {
+    if (!inTauri) {
+      browserDownload(suggested, data)
+      return `C:\Users\you\Downloads\${suggested}`
+    }
+    const { save } = await import("@tauri-apps/plugin-dialog")
+    const path = await save({ defaultPath: suggested, filters })
+    if (!path) return null
+    const bytes = typeof data === "string" ? new TextEncoder().encode(data) : data
+    await invoke("save_bytes", { path, data: toBase64(bytes) })
+    return path
+  },
+  /** Saves next to `beside` as "name<suffix>.ext", never replacing anything. */
+  saveBeside: async (beside: string, suffix: string, ext: string, data: Uint8Array | string): Promise<string> => {
+    if (!inTauri) {
+      browserDownload(`file${suffix}.${ext}`, data)
+      return beside.replace(/\.[^.\/]+$/, `${suffix}.${ext}`)
+    }
+    const text = typeof data === "string"
+    return invoke("save_beside", { beside, suffix, ext, data: text ? data : toBase64(data as Uint8Array), text })
+  },
+  rename: async (pairs: { from: string; to: string }[]): Promise<{ from: string; to: string; ok: boolean; error?: string }[]> =>
+    inTauri ? invoke("rename_files", { pairs }) : pairs.map((p) => ({ ...p, ok: true })),
+  applyCutout: async (path: string, mask: Uint8Array, crop: boolean): Promise<string> =>
+    inTauri ? invoke("apply_cutout", { path, mask: toBase64(mask), crop }) : path.replace(/\.[^.\/]+$/, " (cutout).png"),
+  cutoutModel: async (): Promise<{ path: string | null; size: number }> =>
+    inTauri
+      ? invoke("cutout_model")
+      : {
+          path: import.meta.env.DEV && (await fetch("/_test/isnet-general-use.onnx", { method: "HEAD" })).ok ? "/_test/isnet-general-use.onnx" : null,
+          size: 178_648_008,
+        },
+  downloadCutoutModel: async (): Promise<void> => (inTauri ? invoke("download_cutout_model") : undefined),
+  toBase64,
 }

@@ -13,6 +13,7 @@ import {
   type JobState,
 } from "./engine"
 import { getPrefs } from "./prefs"
+import { announceSaved } from "./saved"
 
 export interface QueueItem {
   id: string
@@ -25,7 +26,7 @@ export interface QueueItem {
   error?: string
 }
 
-export type QueueOp = "convert" | "compress"
+export type QueueOp = "convert" | "compress" | "resize"
 
 interface QueueState {
   items: QueueItem[]
@@ -35,6 +36,7 @@ interface QueueState {
 const stores: Record<QueueOp, QueueState> = {
   convert: { items: [], running: false },
   compress: { items: [], running: false },
+  resize: { items: [], running: false },
 }
 const listeners = new Set<() => void>()
 const emit = () => listeners.forEach((l) => l())
@@ -145,7 +147,28 @@ export async function runQueue(op: QueueOp, build: (item: QueueItem) => { target
       running: false,
       items: stores[op].items.map((i) => (i.state === "queued" ? { ...i, state: "idle" } : i)),
     })
+    announceBatch(op)
   }
+}
+
+/** Tells the person where this batch's files went, with a one-line summary. */
+function announceBatch(op: QueueOp) {
+  const items = stores[op].items
+  const done = items.filter((i) => i.state === "done" && i.output)
+  const failed = items.filter((i) => i.state === "failed").length
+  const parts: string[] = []
+  if (op === "compress" && done.length) {
+    const before = done.reduce((n, i) => n + i.file.size, 0)
+    const after = done.reduce((n, i) => n + (i.outSize ?? 0), 0)
+    if (before > 0) parts.push(`${Math.round((1 - after / before) * 100)}% smaller overall`)
+  }
+  const verb = { convert: "converted", compress: "compressed", resize: "resized" }[op]
+  if (failed) parts.push(`${failed} ${failed === 1 ? "file" : "files"} couldn't be ${verb}`)
+  announceSaved(
+    { convert: "Convert", compress: "Compress", resize: "Resize" }[op],
+    done.map((i) => ({ path: i.output!, size: i.outSize })),
+    parts.join(" · ") || undefined,
+  )
 }
 
 export async function stopQueue(op: QueueOp) {

@@ -389,17 +389,26 @@ pub fn compress_audio(st: &Settings, m: &Media, input_ext: &str, target_kbps: Op
         },
     };
     let level_kbps = match (family, level) {
-        ("opus", Level::Light) => 128,
-        ("opus", Level::Balanced) => 96,
-        ("opus", Level::Strong) => 64,
-        (_, Level::Light) => 192,
-        (_, Level::Balanced) => 128,
-        (_, Level::Strong) => 96,
+        ("opus", Level::Light) => 112,
+        ("opus", Level::Balanced) => 80,
+        ("opus", Level::Strong) => 56,
+        (_, Level::Light) => 160,
+        (_, Level::Balanced) => 112,
+        (_, Level::Strong) => 80,
     };
-    // Never raise the bitrate above what the source already has.
+    // Already-compressed sources (a 128 kbps AAC, a 192 kbps MP3) still have to come out clearly
+    // smaller: each level is also a share of the source bitrate, and the lower of the two wins.
+    let share = match level {
+        Level::Light => 0.8,
+        Level::Balanced => 0.62,
+        Level::Strong => 0.45,
+    };
+    let floor = if family == "opus" { 24 } else { 40 };
     let mut kbps = target_kbps.unwrap_or(level_kbps);
-    if let Some(src) = m.audio_bitrate.filter(|b| *b > 0) {
-        kbps = kbps.min(src.saturating_sub(8).max(32));
+    if target_kbps.is_none() {
+        if let Some(src) = m.audio_bitrate.filter(|b| *b > 0) {
+            kbps = kbps.min(((src as f64 * share) as u32).max(floor));
+        }
     }
     let mut a = s(&["-map", "0:a:0", "-vn"]);
     if st.strip_metadata.unwrap_or(true) {

@@ -116,7 +116,7 @@ export function CountScreen() {
                 ["lower", "lower"],
                 ["title", "Title"],
                 ["sentence", "Sentence"],
-                ["toggle", "tOGGLE"],
+                ["toggle", "Toggle"],
               ] as [CaseMode, string][]
             ).map(([m, l]) => (
               <button key={m} onClick={() => applyCase(m)} className="focus-ring normal-case tracking-normal transition-colors hover:text-ink">
