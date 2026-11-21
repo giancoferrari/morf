@@ -36,7 +36,7 @@ export function useUpdate(): UpdateState {
 }
 
 export async function appVersion(): Promise<string> {
-  if (!inTauri) return "0.2.0"
+  if (!inTauri) return "0.3.0"
   const { getVersion } = await import("@tauri-apps/api/app")
   return getVersion()
 }

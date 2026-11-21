@@ -1,6 +1,6 @@
 [package]
 name = "morf"
-version = "0.2.0"
+version = "0.3.0"
 description = "Morf: convert, compress and count, all on your computer."
 authors = ["Morf contributors"]
 license = "GPL-3.0-or-later"

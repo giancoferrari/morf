@@ -5,6 +5,7 @@
 // Any failure is listed and fails the run.
 //
 //   node scripts/smoke-test.mjs            (builds the debug engine first)
+//   MORF_SMOKE_EXE=path\to\morf.exe node scripts/smoke-test.mjs   (tests that build instead)
 
 import { execFileSync, spawnSync } from "node:child_process"
 import { mkdtempSync, writeFileSync, rmSync, statSync } from "node:fs"
@@ -18,9 +19,13 @@ const win = process.platform === "win32"
 const triple = execFileSync("rustc", ["--print", "host-tuple"], { encoding: "utf8" }).trim()
 const ffmpeg = join(tauri, "binaries", `ffmpeg-${triple}${win ? ".exe" : ""}`)
 
-console.log("Building the engine…")
-execFileSync("cargo", ["build", "--quiet"], { cwd: tauri, stdio: "inherit" })
-const morf = join(tauri, "target", "debug", `morf${win ? ".exe" : ""}`)
+// MORF_SMOKE_EXE=<path to morf.exe> tests a built app (e.g. the release build) instead.
+let morf = process.env.MORF_SMOKE_EXE
+if (!morf) {
+  console.log("Building the engine…")
+  execFileSync("cargo", ["build", "--quiet"], { cwd: tauri, stdio: "inherit" })
+  morf = join(tauri, "target", "debug", `morf${win ? ".exe" : ""}`)
+}
 
 const work = mkdtempSync(join(tmpdir(), "morf-smoke-"))
 const ff = (...args) => execFileSync(ffmpeg, ["-hide_banner", "-loglevel", "error", "-y", ...args], { stdio: "inherit" })
