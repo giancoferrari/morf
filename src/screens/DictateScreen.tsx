@@ -59,6 +59,17 @@ function comboFrom(e: React.KeyboardEvent): string | null {
   return [...mods, key].join("+")
 }
 
+/** Time for today's dictations, the day for older ones. Never wraps. */
+function when(at: number): string {
+  const d = new Date(at * 1000)
+  const now = new Date()
+  if (d.toDateString() === now.toDateString()) return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })
+  const y = new Date(now)
+  y.setDate(now.getDate() - 1)
+  if (d.toDateString() === y.toDateString()) return "Yesterday"
+  return d.toLocaleDateString([], { day: "numeric", month: "short" })
+}
+
 export function DictateScreen() {
   const [settings, setSettings] = useState<DictationSettings | null>(null)
   const [models, setModels] = useState<SpeechModel[]>([])
@@ -233,8 +244,8 @@ export function DictateScreen() {
             <ol className="mt-2 flex flex-col">
               {history.slice(0, 40).map((h, i) => (
                 <li key={`${h.at}-${i}`} className="group flex items-start gap-4 border-b border-hair py-3.5">
-                  <span className="label w-14 shrink-0 pt-1 text-ink-4">
-                    {new Date(h.at * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                  <span className="label w-[4.5rem] shrink-0 pt-1 whitespace-nowrap text-ink-4 tabular-nums" title={new Date(h.at * 1000).toLocaleString()}>
+                    {when(h.at)}
                   </span>
                   <p className="min-w-0 flex-1 text-[15px]/[23px] text-ink select-text">{h.text}</p>
                   <button
@@ -320,7 +331,7 @@ export function DictateScreen() {
             })}
           </ul>
 
-          <div className="label mt-8 py-3 text-ink-4">Settings</div>
+          <div className="label sticky top-0 z-10 mt-8 bg-paper py-3 text-ink-4">Settings</div>
           <div className="divide-y divide-hair border-t border-hair">
             <SettingsRow label="Shortcut" description="Click, then press the keys you want.">
               <button

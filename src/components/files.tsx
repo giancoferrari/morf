@@ -9,11 +9,14 @@ export function DropArea({
   kinds,
   onPaths,
   title = "Drop files",
+  shellHint = false,
 }: {
   dragging: boolean
   kinds: string[]
   onPaths: (paths: string[]) => void
   title?: string
+  /** "Or right-click any file": only for tools that are in the right-click menu. */
+  shellHint?: boolean
 }) {
   return (
     <div
@@ -48,7 +51,7 @@ export function DropArea({
             </span>
             <ArrowUpRight size={15} strokeWidth={1.5} className="transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
           </button>
-          <span className="label text-ink-4">or right-click any file → Morf</span>
+          {shellHint ? <span className="label text-ink-4">or right-click any file → Morf</span> : null}
         </div>
       </div>
     </div>

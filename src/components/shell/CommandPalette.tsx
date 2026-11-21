@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Dialog } from "@base-ui/react/dialog"
 import { TOOLS, type ToolId } from "@/lib/tools"
+import { checkForUpdate } from "@/lib/updater"
+import type { SettingsSection } from "./SettingsDialog"
 import { cn } from "@/lib/utils"
 
 interface Command {
@@ -26,7 +28,7 @@ export function CommandPalette({
   open: boolean
   onOpenChange: (open: boolean) => void
   onOpenTool: (id: ToolId) => void
-  onSettings: () => void
+  onSettings: (section?: SettingsSection) => void
   onToggleTheme: () => void
 }) {
   const [query, setQuery] = useState("")
@@ -43,7 +45,19 @@ export function CommandPalette({
       keywords: `${t.name} ${t.keywords.join(" ")} ${t.blurb}`.toLowerCase(),
     }))
     const actions: Command[] = [
-      { id: "settings", label: "Settings", hint: "Output folder, theme, hardware encoding", section: "Actions", run: onSettings, keywords: "settings preferences options" },
+      { id: "settings", label: "Settings", hint: "Output folder, theme, startup, shortcuts", section: "Actions", run: () => onSettings(), keywords: "settings preferences options" },
+      {
+        id: "updates",
+        label: "Check for updates",
+        hint: "See if a newer Morf is out",
+        section: "Actions",
+        run: () => {
+          void checkForUpdate()
+          onSettings("updates")
+        },
+        keywords: "update upgrade version new release",
+      },
+      { id: "storage", label: "Models and storage", hint: "Delete downloaded models, clear caches", section: "Actions", run: () => onSettings("storage"), keywords: "models delete storage space disk cache" },
       { id: "theme", label: "Toggle theme", hint: "Switch between light and dark", section: "Actions", run: onToggleTheme, keywords: "dark light theme mode appearance" },
     ]
     return [...tools, ...actions]
@@ -78,7 +92,7 @@ export function CommandPalette({
         <Dialog.Backdrop className="fixed inset-0 z-50 bg-paper/60 backdrop-blur-[2px] transition-opacity duration-200 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0" />
         <Dialog.Popup
           className={cn(
-            "fixed top-[14vh] left-1/2 z-50 w-[min(640px,calc(100vw-32px))] -translate-x-1/2 overflow-hidden rounded-2xl bg-card shadow-float outline-none",
+            "on-card fixed top-[14vh] left-1/2 z-50 w-[min(640px,calc(100vw-32px))] -translate-x-1/2 overflow-hidden rounded-2xl bg-card shadow-float outline-none",
             "transition-[opacity,transform] duration-200 ease-out-quint data-[ending-style]:opacity-0 data-[starting-style]:-translate-y-1.5 data-[starting-style]:opacity-0",
           )}
         >

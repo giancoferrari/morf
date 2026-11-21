@@ -48,7 +48,7 @@ export function SavedToast() {
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       className={cn(
-        "fixed right-5 bottom-5 z-[60] w-[min(440px,calc(100vw-40px))] rounded-2xl bg-card p-5 shadow-float",
+        "on-card fixed right-5 bottom-5 z-[60] w-[min(440px,calc(100vw-40px))] rounded-2xl bg-card p-5 shadow-float",
         leaving ? "opacity-0 transition-opacity duration-200" : "anim-pop",
       )}
     >

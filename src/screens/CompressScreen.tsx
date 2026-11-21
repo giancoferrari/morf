@@ -104,7 +104,7 @@ export function CompressScreen({ dragging }: { dragging: boolean }) {
       </ToolHeader>
 
       {items.length === 0 ? (
-        <DropArea dragging={dragging} kinds={["Video", "Audio", "Images", "PDF"]} onPaths={(p) => void addPaths("compress", p)} />
+        <DropArea shellHint dragging={dragging} kinds={["Video", "Audio", "Images", "PDF"]} onPaths={(p) => void addPaths("compress", p)} />
       ) : (
         <div className="grid min-h-0 flex-1 grid-cols-12 gap-x-5 border-t border-hair">
           <section className="scroll-quiet col-span-7 min-h-0 overflow-y-auto pl-5">

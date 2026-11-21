@@ -2,7 +2,11 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "What Morf's window may do.",
-  "windows": ["main", "overlay"],
+  "windows": [
+    "main",
+    "overlay",
+    "picker-*"
+  ],
   "permissions": [
     "core:default",
     "core:window:allow-minimize",
@@ -16,6 +20,11 @@
     "dialog:allow-save",
     "opener:allow-reveal-item-in-dir",
     "opener:allow-open-url",
-    "notification:default"
+    "notification:default",
+    "updater:default",
+    "process:allow-restart",
+    "autostart:allow-enable",
+    "autostart:allow-disable",
+    "autostart:allow-is-enabled"
   ]
 }

@@ -68,6 +68,16 @@ html:root {
   --chatcn-primary-hover: var(--ink-2);
 }
 
+/* On raised cards (Settings, dialogs) the card is lighter than paper-2 in dark mode, so fills
+   would vanish. Step them up one shade there. */
+.dark .on-card {
+  --paper-2: oklch(0.225 0.004 90);
+  --paper-3: oklch(0.26 0.004 90);
+  --chatcn-fill: oklch(0.225 0.004 90);
+  --chatcn-fill-hover: oklch(0.225 0.004 90);
+  --chatcn-fill-active: oklch(0.26 0.004 90);
+}
+
 @theme inline {
   --font-sans: "Inter Tight Variable", ui-sans-serif, system-ui, sans-serif;
   --font-mono: "Geist Mono Variable", ui-monospace, "SF Mono", Consolas, monospace;
@@ -138,21 +148,26 @@ html:root {
     letter-spacing: -0.045em;
     line-height: 0.92;
   }
-  .scroll-quiet {
+  /* Quiet scrollbars everywhere (settings panes, text areas, lists), not only on .scroll-quiet. */
+  .scroll-quiet,
+  * {
     scrollbar-width: thin;
     scrollbar-color: var(--hair-strong) transparent;
   }
-  .scroll-quiet::-webkit-scrollbar {
+  .scroll-quiet::-webkit-scrollbar,
+  *::-webkit-scrollbar {
     width: 10px;
     height: 10px;
   }
-  .scroll-quiet::-webkit-scrollbar-thumb {
+  .scroll-quiet::-webkit-scrollbar-thumb,
+  *::-webkit-scrollbar-thumb {
     background: var(--hair-strong);
     background-clip: content-box;
     border: 3px solid transparent;
     border-radius: 999px;
   }
-  .scroll-quiet::-webkit-scrollbar-track {
+  .scroll-quiet::-webkit-scrollbar-track,
+  *::-webkit-scrollbar-track {
     background: transparent;
   }
   .focus-ring:focus-visible {

@@ -4,6 +4,8 @@ import { Wordmark } from "@/components/Logo"
 import { inTauri } from "@/lib/engine"
 import { setPref, usePrefs } from "@/lib/prefs"
 import { getTool, type ToolId } from "@/lib/tools"
+import { useUpdate } from "@/lib/updater"
+import type { SettingsSection } from "./SettingsDialog"
 import { cn, isMac, modKey } from "@/lib/utils"
 
 /**
@@ -20,9 +22,11 @@ export function TitleBar({
   route: ToolId | null
   onHome: () => void
   onSearch: () => void
-  onSettings: () => void
+  onSettings: (section?: SettingsSection) => void
 }) {
   const { theme } = usePrefs()
+  const update = useUpdate()
+  const hasUpdate = update.kind === "available" || update.kind === "downloading" || update.kind === "installing"
   const dark = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches)
   const tool = route ? getTool(route) : null
 
@@ -56,13 +60,23 @@ export function TitleBar({
       <div data-tauri-drag-region className="flex-1 self-stretch" />
 
       <div className="no-drag flex items-center gap-5">
+        {hasUpdate ? (
+          <button
+            onClick={() => onSettings("updates")}
+            className="label focus-ring anim-fade flex items-center gap-1.5 text-ink transition-opacity hover:opacity-60"
+            title={`Morf ${update.version} is ready to install`}
+          >
+            <span className="size-1.5 rounded-full bg-signal" />
+            Update {update.version}
+          </button>
+        ) : null}
         <button onClick={onSearch} className="label focus-ring flex items-center gap-2 text-ink-3 transition-colors hover:text-ink">
           Search
           <kbd className="rounded-[4px] border border-hair-strong px-1 py-px font-mono text-[10px] leading-3 tracking-normal normal-case">
             {modKey} K
           </kbd>
         </button>
-        <button onClick={onSettings} className="label focus-ring text-ink-3 transition-colors hover:text-ink">
+        <button onClick={() => onSettings()} className="label focus-ring text-ink-3 transition-colors hover:text-ink">
           Settings
         </button>
         <button

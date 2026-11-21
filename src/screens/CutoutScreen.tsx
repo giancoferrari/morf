@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react"
+import { ArrowUpRight } from "lucide-react"
 import type { InferenceSession } from "onnxruntime-web"
 import { ToolHeader } from "@/components/files"
 import { Button } from "@/components/ui/button"
@@ -161,6 +162,11 @@ export function CutoutScreen() {
     ctx.globalCompositeOperation = "source-over"
   }, [mask])
 
+  const choose = async () => {
+    const [p] = await pickFiles([{ name: "Photos", extensions: ["jpg", "jpeg", "png", "webp", "heic", "heif", "avif", "tif", "tiff", "bmp"] }], false)
+    if (p) void process(p)
+  }
+
   if (!model) return null
 
   return (
@@ -205,7 +211,7 @@ export function CutoutScreen() {
         </div>
       ) : (
         <div className={cn("grid min-h-0 flex-1 grid-cols-12 gap-x-5 border-t border-hair transition-colors", dragging && "bg-paper-2")}>
-          <section className="relative col-span-8 flex min-h-0 items-center justify-center p-6">
+          <section className={cn("relative col-span-8 flex min-h-0 items-center justify-center", src ? "p-6" : "px-5 pt-6 pb-6")}>
             {src && mask ? (
               <div className="relative max-h-full max-w-full" onPointerMove={(e) => e.buttons === 1 && setSplit(((e.clientX - e.currentTarget.getBoundingClientRect().left) / e.currentTarget.getBoundingClientRect().width) * 100)}>
                 <div className="checker absolute inset-0 rounded-xl" />
@@ -219,23 +225,33 @@ export function CutoutScreen() {
                 <div className="label absolute inset-0 grid place-items-center text-ink">{busy}</div>
               </div>
             ) : (
-              <p className={cn("display self-start justify-self-start text-[clamp(52px,7vw,112px)] transition-colors", dragging ? "text-ink" : "text-ghost")}>{dragging ? "Let go" : "Drop a photo"}</p>
+              // Empty: the same drop target as the other file tools.
+              <div className="flex h-full w-full flex-col justify-between">
+                <div className="label flex justify-between text-ink-4">
+                  <span>JPEG · PNG · WebP · HEIC</span>
+                  <span>Nothing leaves this computer</span>
+                </div>
+                <div className="flex flex-col gap-5">
+                  <p className={cn("display text-[clamp(56px,8vw,140px)] transition-colors duration-300", dragging ? "text-ink" : "text-ghost")}>{dragging ? "Let go" : "Drop a photo"}</p>
+                  <button onClick={() => void choose()} className="focus-ring group flex w-fit items-center gap-1.5 pl-1 text-[15px] font-medium tracking-[-0.01em] text-ink">
+                    <span className="underline decoration-hair-strong underline-offset-4 transition-colors group-hover:decoration-ink">or choose a photo</span>
+                    <ArrowUpRight size={15} strokeWidth={1.5} className="transition-transform duration-200 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+                  </button>
+                </div>
+              </div>
             )}
           </section>
-          <section className="col-span-4 flex min-h-0 flex-col justify-between border-l border-hair px-5 py-4">
-            <div className="flex flex-col gap-4">
-              <Button
-                size="lg"
-                variant="outline"
-                disabled={!!busy}
-                onClick={async () => {
-                  const [p] = await pickFiles()
-                  if (p) void process(p)
-                }}
-              >
-                Choose photo
-              </Button>
-              {error ? <p className="text-[13px] text-signal">{error}</p> : null}
+          <section className="col-span-4 flex min-h-0 flex-col border-l border-hair">
+            <div className="scroll-quiet min-h-0 flex-1 overflow-y-auto px-5 pb-6">
+              <div className="label sticky top-0 z-10 flex justify-between bg-paper py-3 text-ink-4">
+                <span>Result</span>
+                {src && !busy ? (
+                  <button className="focus-ring transition-colors hover:text-ink" onClick={() => void choose()}>
+                    Choose another
+                  </button>
+                ) : null}
+              </div>
+              {error ? <p className="mb-3 text-[13px]/[19px] text-signal">{error}</p> : null}
               {mask ? (
                 <div className="divide-y divide-hair border-t border-hair">
                   <SettingsRow label="Trim to the subject" description="Removes the empty border around it.">
@@ -245,27 +261,32 @@ export function CutoutScreen() {
                     <input type="range" min={0} max={100} value={split} onChange={(e) => setSplit(Number(e.target.value))} className="morf-range w-32" style={{ "--pct": `${split}%` } as React.CSSProperties} />
                   </SettingsRow>
                 </div>
-              ) : null}
+              ) : (
+                <p className="text-[13px]/[19px] text-ink-3">{busy ?? (src ? "" : "The subject is found on this computer. People, products and pets work best.")}</p>
+              )}
             </div>
-            <Button
-              size="xl"
-              variant="solid"
-              disabled={!mask || !!busy}
-              onClick={async () => {
-                if (!src || !mask) return
-                setBusy("Saving…")
-                try {
-                  const out = await fileApi.applyCutout(src.path, await maskToPng(mask), crop)
-                  announceSaved("Cutout", [{ path: out }])
-                } catch (e) {
-                  setError(String(e))
-                } finally {
-                  setBusy(null)
-                }
-              }}
-            >
-              Save transparent PNG
-            </Button>
+            <div className="flex items-center justify-between gap-4 border-t border-hair px-5 py-4">
+              <span className="label min-w-0 truncate text-ink-4">PNG · original kept</span>
+              <Button
+                size="xl"
+                variant="solid"
+                disabled={!mask || !!busy}
+                onClick={async () => {
+                  if (!src || !mask) return
+                  setBusy("Saving…")
+                  try {
+                    const out = await fileApi.applyCutout(src.path, await maskToPng(mask), crop)
+                    announceSaved("Cutout", [{ path: out }])
+                  } catch (e) {
+                    setError(String(e))
+                  } finally {
+                    setBusy(null)
+                  }
+                }}
+              >
+                {busy === "Saving…" ? "Saving…" : "Save"}
+              </Button>
+            </div>
           </section>
         </div>
       )}

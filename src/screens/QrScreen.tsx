@@ -195,7 +195,7 @@ export function QrScreen() {
 
       {tab === "make" ? (
         <div className="grid min-h-0 flex-1 grid-cols-12 gap-x-5 border-t border-hair">
-          <section className="scroll-quiet col-span-6 min-h-0 overflow-y-auto pl-5 pb-8">
+          <section className="scroll-quiet col-span-6 min-h-0 overflow-y-auto pr-5 pl-5 pb-8">
             <div className="label py-3 text-ink-4">What</div>
             <div className="flex flex-wrap gap-x-4">
               {(
@@ -260,7 +260,18 @@ export function QrScreen() {
                       <span className="size-3.5 rounded-[3px]" style={{ background: c.dark }} />
                     </button>
                   ))}
-                  <input type="color" value={f.dark} onChange={(e) => patch({ dark: e.target.value })} className="size-8 cursor-pointer rounded-full border-0 bg-transparent" title="Custom colour" />
+                  {/* Custom ink: a round swatch like the others, with the system colour picker under it. */}
+                  <label
+                    title="Custom colour"
+                    className={cn(
+                      "relative grid size-8 cursor-pointer place-items-center rounded-full ring-1 ring-hair-strong focus-within:ring-2 focus-within:ring-ink",
+                      !COLOURS.some((c) => f.dark === c.dark && f.light === c.light) && "ring-2 ring-ink",
+                    )}
+                    style={{ background: "conic-gradient(from 90deg, #e5484d, #f5a524, #46a758, #0090ff, #8e4ec6, #e5484d)" }}
+                  >
+                    <span className="size-3.5 rounded-[3px] ring-1 ring-white/70" style={{ background: f.dark }} />
+                    <input type="color" value={f.dark} onChange={(e) => patch({ dark: e.target.value })} className="absolute inset-0 cursor-pointer opacity-0" aria-label="Custom colour" />
+                  </label>
                 </div>
               </SettingsRow>
               <SettingsRow label="Error correction" description="Higher survives damage and logos on top, but is denser.">

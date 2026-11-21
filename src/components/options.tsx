@@ -47,6 +47,7 @@ export function Range({
   step = 1,
   onChange,
   format = (v) => String(v),
+  valueAlign = "end",
   ...aria
 }: {
   value: number
@@ -55,6 +56,8 @@ export function Range({
   step?: number
   onChange: (v: number) => void
   format?: (v: number) => string
+  /** "end" lines values up at a row's edge (settings rows); "start" keeps a value beside its slider. */
+  valueAlign?: "start" | "end"
   "aria-label"?: string
 }) {
   const id = useId()
@@ -73,7 +76,7 @@ export function Range({
         style={{ "--pct": `${pct}%` } as React.CSSProperties}
         {...aria}
       />
-      <output htmlFor={id} className="label w-12 text-right text-ink tabular-nums">
+      <output htmlFor={id} className={cn("label text-ink tabular-nums", valueAlign === "end" ? "w-12 text-right" : "min-w-6 text-left")}>
         {format(value)}
       </output>
     </span>

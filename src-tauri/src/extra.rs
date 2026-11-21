@@ -106,12 +106,32 @@ pub fn save_beside(beside: &str, suffix: &str, ext: &str, data: &str, text: bool
     let (dir, _) = paths::output_dir(input, None);
     let stem = format!("{}{}", paths::stem_of(input), suffix);
     let out = paths::unique_path(&dir, &stem, ext);
-    if text {
-        std::fs::write(&out, data)?;
-    } else {
-        std::fs::write(&out, b64(data)?)?;
+    let bytes = if text { data.as_bytes().to_vec() } else { b64(data)? };
+    // Through a part file, so a failed write never leaves half a file under the real name.
+    let part = paths::part_path(&out);
+    if let Err(e) = std::fs::write(&part, bytes) {
+        paths::discard(&part);
+        return Err(e.into());
     }
-    Ok(out.to_string_lossy().into_owned())
+    Ok(paths::commit(&part, &out)?.to_string_lossy().into_owned())
+}
+
+/// Makes a new folder next to `beside`, named `stem suffix` (numbered if taken), for tools that
+/// write many files at once (PDF split). Returns its path.
+pub fn folder_beside(beside: &str, suffix: &str) -> Result<String> {
+    let input = Path::new(beside);
+    let (dir, _) = paths::output_dir(input, None);
+    let stem = format!("{}{}", paths::stem_of(input), suffix);
+    let mut n = 1;
+    loop {
+        let name = if n == 1 { stem.clone() } else { format!("{stem} {n}") };
+        let candidate = dir.join(name);
+        if !candidate.exists() {
+            std::fs::create_dir(&candidate)?;
+            return Ok(candidate.to_string_lossy().into_owned());
+        }
+        n += 1;
+    }
 }
 
 /* ------------------------------------------------------------------------------------------------
@@ -228,6 +248,77 @@ pub async fn apply_cutout(path: &str, mask_png: &str, crop: bool) -> Result<Stri
         Ok(dest.to_string_lossy().into_owned())
     })
     .await?
+}
+
+/* ------------------------------------------------------------------------------------------------
+ * Storage: what Morf keeps on disk, for Settings
+ * ----------------------------------------------------------------------------------------------*/
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StoredModel {
+    pub id: String,
+    pub name: String,
+    /// "speech" (Dictate) or "cutout".
+    pub kind: &'static str,
+    pub size: u64,
+}
+
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Storage {
+    pub models: Vec<StoredModel>,
+    /// Converted previews of HEIC, TIFF and RAW pictures.
+    pub previews: u64,
+    pub data_dir: String,
+}
+
+fn dir_size(dir: &Path) -> u64 {
+    std::fs::read_dir(dir)
+        .map(|rd| {
+            rd.flatten()
+                .map(|e| match e.metadata() {
+                    Ok(m) if m.is_dir() => dir_size(&e.path()),
+                    Ok(m) => m.len(),
+                    Err(_) => 0,
+                })
+                .sum()
+        })
+        .unwrap_or(0)
+}
+
+fn previews_dir() -> PathBuf {
+    std::env::temp_dir().join("morf-previews")
+}
+
+pub fn storage(app: &AppHandle) -> Result<Storage> {
+    use tauri::Manager;
+    let mut models: Vec<StoredModel> = crate::dictate::downloaded_models(app)
+        .into_iter()
+        .map(|(id, name, size)| StoredModel { id: id.into(), name: name.into(), kind: "speech", size })
+        .collect();
+    if let Ok(p) = cutout_model_path(app) {
+        if let Ok(m) = std::fs::metadata(&p) {
+            models.push(StoredModel { id: "cutout".into(), name: "Cutout (ISNet)".into(), kind: "cutout", size: m.len() });
+        }
+    }
+    Ok(Storage { models, previews: dir_size(&previews_dir()), data_dir: app.path().app_data_dir()?.to_string_lossy().into_owned() })
+}
+
+pub fn clear_previews() -> Result<()> {
+    let dir = previews_dir();
+    if dir.exists() {
+        std::fs::remove_dir_all(&dir)?;
+    }
+    Ok(())
+}
+
+pub fn delete_cutout_model(app: &AppHandle) -> Result<()> {
+    let p = cutout_model_path(app)?;
+    if p.exists() {
+        std::fs::remove_file(p)?;
+    }
+    Ok(())
 }
 
 #[cfg(test)]

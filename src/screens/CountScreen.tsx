@@ -108,7 +108,9 @@ export function CountScreen() {
       <section className="flex min-h-0 flex-col">
         <div className="flex items-end justify-between gap-6 px-5 pt-7 pb-5">
           <h1 className="display anim-rise text-[clamp(56px,6vw,96px)]">Count</h1>
-          <div className="label flex flex-wrap items-center justify-end gap-x-5 gap-y-2 pb-2 text-ink-4">
+          {/* Two groups that wrap as wholes, so a narrow window never strands one word on a line. */}
+          <div className="label flex flex-wrap items-center justify-end gap-x-8 gap-y-2 pb-2 text-ink-4">
+            <span className="flex items-center gap-x-5 whitespace-nowrap">
             <span className="text-ink">Case</span>
             {(
               [
@@ -123,7 +125,8 @@ export function CountScreen() {
                 {l}
               </button>
             ))}
-            <span className="text-ink-4">/</span>
+            </span>
+            <span className="flex items-center gap-x-5 whitespace-nowrap">
             <button
               className="focus-ring transition-colors hover:text-ink"
               onClick={async () => {
@@ -137,6 +140,7 @@ export function CountScreen() {
             <button className="focus-ring transition-colors hover:text-ink" onClick={() => replaceAll("")}>
               Clear
             </button>
+            </span>
           </div>
         </div>
 
@@ -262,7 +266,7 @@ export function CountScreen() {
           <div className="flex items-center justify-between">
             <p className="label text-ink-4">
               Grammar
-              {checking && grammarState === "ready" ? (
+              {checking && grammarState === "ready" && text.trim() ? (
                 <span className="ml-2 text-ink">{issues.length || "All clear"}</span>
               ) : null}
             </p>

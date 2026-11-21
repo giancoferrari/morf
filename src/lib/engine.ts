@@ -273,10 +273,23 @@ export async function reveal(path: string): Promise<void> {
   await revealItemInDir(path)
 }
 
-export async function pickFiles(): Promise<string[]> {
-  if (!inTauri) return []
+/** In a plain browser, a hidden file input stands in for the system dialog. */
+function browserPick(multiple: boolean, filters?: { name: string; extensions: string[] }[]): Promise<string[]> {
+  return new Promise((resolve) => {
+    const input = document.createElement("input")
+    input.type = "file"
+    input.multiple = multiple
+    if (filters) input.accept = filters.flatMap((f) => f.extensions.map((e) => `.${e}`)).join(",")
+    input.onchange = () => resolve(registerBrowserFiles([...(input.files ?? [])]))
+    input.oncancel = () => resolve([])
+    input.click()
+  })
+}
+
+export async function pickFiles(filters?: { name: string; extensions: string[] }[], multiple = true): Promise<string[]> {
+  if (!inTauri) return browserPick(multiple, filters)
   const { open } = await import("@tauri-apps/plugin-dialog")
-  const r = await open({ multiple: true, directory: false })
+  const r = await open({ multiple, directory: false, filters })
   return r ? (Array.isArray(r) ? r : [r]) : []
 }
 
@@ -466,6 +479,47 @@ export const dictation = {
     inTauri ? listen<DictationEvent>("morf://dictation", (e) => cb(e.payload)) : () => {},
   onDownload: async (cb: (e: ModelDownloadEvent) => void): Promise<UnlistenFn> =>
     inTauri ? listen<ModelDownloadEvent>("morf://model", (e) => cb(e.payload)) : () => {},
+}
+
+/* -------------------------------------------------------------------------------------------------
+ * Palette: pick a colour from anywhere on screen
+ * -----------------------------------------------------------------------------------------------*/
+
+declare global {
+  interface Window {
+    EyeDropper?: new () => { open: () => Promise<{ sRGBHex: string }> }
+  }
+}
+
+/** True where picking from the screen works: always in the app, and in browsers with EyeDropper. */
+export const canPickScreen = inTauri || (typeof window !== "undefined" && !!window.EyeDropper)
+
+/**
+ * Morf hides, a still of each monitor appears with a loupe, and a click picks. Resolves with the
+ * hex, or null when cancelled. In a plain browser the EyeDropper stands in.
+ */
+export async function pickScreenColour(): Promise<string | null> {
+  if (!inTauri) {
+    if (!window.EyeDropper) return null
+    try {
+      return (await new window.EyeDropper().open()).sRGBHex
+    } catch {
+      return null
+    }
+  }
+  return new Promise((resolve, reject) => {
+    let off: UnlistenFn | undefined
+    void listen<{ hex: string | null }>("morf://picked", (e) => {
+      off?.()
+      resolve(e.payload.hex)
+    }).then((u) => {
+      off = u
+      invoke("pick_screen_colour").catch((err) => {
+        u()
+        reject(err)
+      })
+    })
+  })
 }
 
 /* -------------------------------------------------------------------------------------------------

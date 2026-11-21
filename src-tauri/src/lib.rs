@@ -9,6 +9,8 @@ mod jobs;
 mod overlay;
 mod paths;
 mod pdf;
+mod pdfsec;
+mod picker;
 mod probe;
 mod shell;
 mod tools;
@@ -348,6 +350,41 @@ fn save_beside(beside: String, suffix: String, ext: String, data: String, text: 
 }
 
 #[tauri::command]
+fn storage_info(app: AppHandle) -> Result<extra::Storage, String> {
+    extra::storage(&app).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn clear_previews() -> Result<(), String> {
+    extra::clear_previews().map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn delete_cutout_model(app: AppHandle) -> Result<(), String> {
+    extra::delete_cutout_model(&app).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn folder_beside(beside: String, suffix: String) -> Result<String, String> {
+    extra::folder_beside(&beside, &suffix).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn pdf_protect(req: pdfsec::Protect) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || pdfsec::protect(req)).await.map_err(|e| e.to_string())?.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn pdf_unlock(path: String, password: String) -> Result<String, String> {
+    tauri::async_runtime::spawn_blocking(move || pdfsec::unlock(&path, &password)).await.map_err(|e| e.to_string())?.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+async fn pdf_needs_password(path: String) -> bool {
+    tauri::async_runtime::spawn_blocking(move || pdfsec::needs_password(&path)).await.unwrap_or(false)
+}
+
+#[tauri::command]
 fn rename_files(pairs: Vec<extra::RenamePair>) -> Vec<extra::RenameResult> {
     extra::rename_files(pairs)
 }
@@ -376,6 +413,30 @@ fn download_cutout_model(app: AppHandle) -> Result<(), String> {
     let (_, url, size, sha) = extra::CUTOUT_MODEL;
     dictate::download_verified(app, "cutout".into(), url.into(), size, sha.into(), dest);
     Ok(())
+}
+
+/* ------------------------------------------------------------------------------------------------
+ * Palette: pick a colour from the screen
+ * ----------------------------------------------------------------------------------------------*/
+
+#[tauri::command]
+async fn pick_screen_colour(app: AppHandle) -> Result<(), String> {
+    picker::open(app).await.map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn picker_shot(app: AppHandle, index: usize) -> Result<tauri::ipc::Response, String> {
+    picker::shot(&app, index).map(tauri::ipc::Response::new).map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+fn picker_ready(app: AppHandle, index: usize) {
+    picker::ready(&app, index);
+}
+
+#[tauri::command]
+fn picker_done(app: AppHandle, hex: Option<String>) {
+    picker::done(&app, hex);
 }
 
 /* ------------------------------------------------------------------------------------------------
@@ -452,6 +513,10 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_notification::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
+        // "Open at sign-in": starts quietly in the tray (see `--autostart` in setup).
+        .plugin(tauri_plugin_autostart::init(tauri_plugin_autostart::MacosLauncher::LaunchAgent, Some(vec!["--autostart"])))
         .plugin(
             tauri_plugin_global_shortcut::Builder::new()
                 .with_handler(|app, _shortcut, event| {
@@ -469,6 +534,7 @@ pub fn run() {
         )
         .manage(Mutex::new(first))
         .manage(Arc::new(jobs::Jobs::default()))
+        .manage(picker::Picker::default())
         .setup(|app| {
             if cfg!(debug_assertions) {
                 app.handle().plugin(tauri_plugin_log::Builder::default().level(log::LevelFilter::Info).build())?;
@@ -481,6 +547,11 @@ pub fn run() {
             app.manage::<dictate::Shared>(Arc::new(dictate::start(&handle)));
             overlay::create(&handle)?;
             create_tray(&handle)?;
+            if std::env::args().any(|a| a == "--autostart") {
+                if let Some(w) = handle.get_webview_window("main") {
+                    let _ = w.hide();
+                }
+            }
             let settings = dictate::load_settings(&handle);
             if let Err(e) = apply_dictation(&handle, &settings) {
                 log::warn!("{e}");
@@ -535,7 +606,18 @@ pub fn run() {
             rename_files,
             apply_cutout,
             cutout_model,
-            download_cutout_model
+            download_cutout_model,
+            pick_screen_colour,
+            picker_shot,
+            picker_ready,
+            picker_done,
+            folder_beside,
+            pdf_protect,
+            pdf_unlock,
+            pdf_needs_password,
+            storage_info,
+            clear_previews,
+            delete_cutout_model
         ])
         .run(tauri::generate_context!())
         .expect("error while running Morf");

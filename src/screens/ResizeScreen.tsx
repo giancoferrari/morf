@@ -157,12 +157,15 @@ export function ResizeScreen({ dragging }: { dragging: boolean }) {
                       key={p.label}
                       onClick={() => patch({ width: p.w, height: p.h, mode: p.mode })}
                       className={cn(
-                        "chatcn-focus flex h-8 items-baseline gap-1.5 rounded-full px-3.5 text-[13px] font-medium transition-colors",
+                        "chatcn-focus inline-flex h-8 items-center justify-center rounded-full px-3.5 text-[13px] leading-none font-medium transition-colors",
                         s.width === p.w && s.height === p.h && s.mode === p.mode ? "bg-ink text-paper" : "bg-paper-2 text-ink-2 hover:bg-paper-3",
                       )}
                     >
-                      {p.label}
-                      <span className="text-[11px] opacity-60">{p.hint}</span>
+                      {/* Baseline-aligned inside, centred as a whole in the pill. */}
+                      <span className="flex items-baseline gap-1.5">
+                        {p.label}
+                        <span className="text-[11px] opacity-60">{p.hint}</span>
+                      </span>
                     </button>
                   ))}
                 </div>

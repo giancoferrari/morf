@@ -15,6 +15,10 @@ export interface Prefs {
   rememberFormatSettings: boolean
   reduceMotion: boolean
   dialect: "American" | "British" | "Canadian" | "Australian"
+  /** Look for a new version of Morf on launch. */
+  autoUpdate: boolean
+  /** What the window opens on: the index, or the tool used last. */
+  startOn: "index" | "last"
 }
 
 const DEFAULTS: Prefs = {
@@ -29,6 +33,8 @@ const DEFAULTS: Prefs = {
   rememberFormatSettings: true,
   reduceMotion: false,
   dialect: "American",
+  autoUpdate: true,
+  startOn: "index",
 }
 
 const KEY = "morf.prefs.v1"
@@ -66,6 +72,17 @@ export function usePrefs(): Prefs {
     },
     () => state,
   )
+}
+
+/** Puts every preference back to its default. */
+export function resetPrefs() {
+  state = DEFAULTS
+  try {
+    localStorage.removeItem(KEY)
+  } catch {
+    /* ignore */
+  }
+  listeners.forEach((l) => l())
 }
 
 /** A small keyed store for per-tool state that should survive a restart (drafts, last choices). */

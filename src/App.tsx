@@ -2,10 +2,12 @@ import { useCallback, useEffect, useRef, useState } from "react"
 import { Dialog } from "@base-ui/react/dialog"
 import { CommandPalette } from "@/components/shell/CommandPalette"
 import { SavedToast } from "@/components/shell/SavedToast"
-import { SettingsDialog } from "@/components/shell/SettingsDialog"
+import { SettingsDialog, type SettingsSection } from "@/components/shell/SettingsDialog"
 import { TitleBar } from "@/components/shell/TitleBar"
 import { inspect, onOpenFiles, onWindowDrop, type FileInfo } from "@/lib/engine"
-import { setPref } from "@/lib/prefs"
+import { handOff } from "@/lib/handoff"
+import { getPrefs, loadJSON, saveJSON, setPref } from "@/lib/prefs"
+import { scheduleUpdateCheck } from "@/lib/updater"
 import { addPaths } from "@/lib/queue"
 import { useApplyTheme } from "@/lib/theme"
 import { TOOLS, getTool, type ToolId } from "@/lib/tools"
@@ -17,6 +19,7 @@ import { CompareScreen } from "@/screens/CompareScreen"
 import { CutoutScreen } from "@/screens/CutoutScreen"
 import { DictateScreen } from "@/screens/DictateScreen"
 import { PaletteScreen } from "@/screens/PaletteScreen"
+import { PdfScreen } from "@/screens/PdfScreen"
 import { QrScreen } from "@/screens/QrScreen"
 import { ReadScreen } from "@/screens/ReadScreen"
 import { RenameScreen } from "@/screens/RenameScreen"
@@ -25,15 +28,29 @@ import { IndexScreen } from "@/screens/IndexScreen"
 import { SoonScreen } from "@/screens/SoonScreen"
 
 /** Tools that handle dropped files on their own screen. */
-const SELF_DROP = new Set<ToolId>(["rename", "diff", "qr", "palette", "ocr", "cutout"])
+const SELF_DROP = new Set<ToolId>(["rename", "diff", "qr", "palette", "ocr", "cutout", "pdf"])
+/** Self-drop tools that also accept files handed over before their screen opens. */
+const TAKES_HANDOFF = new Set<ToolId>(["pdf", "ocr"])
 /** Tools whose screen shows its own drop target, so the full-window hint isn't needed. */
 const OWN_DROP_UI = new Set<ToolId>(["convert", "compress", "resize", ...SELF_DROP])
 
 export default function App() {
   useApplyTheme()
-  const [route, setRoute] = useState<ToolId | null>(null)
+  const [route, setRoute] = useState<ToolId | null>(() => {
+    if (getPrefs().startOn !== "last") return null
+    const last = loadJSON<ToolId | null>("route.last", null)
+    return last && TOOLS.some((t) => t.id === last) ? last : null
+  })
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [settingsSection, setSettingsSection] = useState<SettingsSection>("general")
+  const openSettings = useCallback((section?: SettingsSection) => {
+    if (section) setSettingsSection(section)
+    setSettingsOpen(true)
+  }, [])
+
+  useEffect(() => saveJSON("route.last", route), [route])
+  useEffect(() => scheduleUpdateCheck(), [])
   const [dragging, setDragging] = useState(false)
   /** Files dropped on the index wait here while the person picks a tool. */
   const [pending, setPending] = useState<{ paths: string[]; infos: FileInfo[] } | null>(null)
@@ -44,7 +61,7 @@ export default function App() {
     setPref("theme", dark ? "light" : "dark")
   }, [])
 
-  // Keyboard: palette, settings, back, and 1–3 for the ready tools.
+  // Keyboard: palette, settings, back, and Ctrl+1…9 for the first nine tools.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const mod = e.metaKey || e.ctrlKey
@@ -76,8 +93,14 @@ export default function App() {
   const routeFiles = useCallback(async (paths: string[], tool: string | null) => {
     if (!paths.length) return
     const target = (tool as ToolId | null) ?? routeRef.current
-    // These tools listen for drops themselves.
-    if (target && SELF_DROP.has(target)) return
+    // These tools listen for drops themselves while open; otherwise open them with the files.
+    if (target && SELF_DROP.has(target)) {
+      if (tool && TAKES_HANDOFF.has(target)) {
+        handOff(target, paths)
+        setRoute(target)
+      }
+      return
+    }
     if (target === "resize") {
       await addPaths("resize", paths)
       return
@@ -118,12 +141,13 @@ export default function App() {
     if (route === "palette") return <PaletteScreen />
     if (route === "ocr") return <ReadScreen />
     if (route === "cutout") return <CutoutScreen />
+    if (route === "pdf") return <PdfScreen />
     return <SoonScreen id={route} onBack={() => open(null)} />
   })()
 
   return (
     <div className="flex h-full flex-col bg-paper text-ink">
-      <TitleBar route={route} onHome={() => open(null)} onSearch={() => setPaletteOpen(true)} onSettings={() => setSettingsOpen(true)} />
+      <TitleBar route={route} onHome={() => open(null)} onSearch={() => setPaletteOpen(true)} onSettings={openSettings} />
       <div key={route ?? "index"} className="anim-fade relative min-h-0 flex-1">
         {screen}
         {/* On screens without their own drop target, show a full-window hint. */}
@@ -138,10 +162,10 @@ export default function App() {
         open={paletteOpen}
         onOpenChange={setPaletteOpen}
         onOpenTool={open}
-        onSettings={() => setSettingsOpen(true)}
+        onSettings={openSettings}
         onToggleTheme={toggleTheme}
       />
-      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
+      <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} section={settingsSection} onSectionChange={setSettingsSection} />
       <SavedToast />
       <ChooseTool
         pending={pending}
@@ -150,6 +174,7 @@ export default function App() {
           const p = pending
           setPending(null)
           if (!p) return
+          if (TAKES_HANDOFF.has(id)) handOff(id, p.paths)
           setRoute(id)
           if (id === "convert" || id === "compress" || id === "resize") await addPaths(id, p.paths)
         }}
@@ -171,20 +196,27 @@ function ChooseTool({
   const n = pending?.paths.length ?? 0
   const kinds = new Set(pending?.infos.map((i) => i.kind))
   const onlyImages = !!pending && pending.infos.every((i) => i.kind === "image")
-  const choices: ToolId[] = onlyImages ? ["convert", "compress", "resize"] : ["convert", "compress"]
+  const onlyPdfs = !!pending && pending.infos.every((i) => i.kind === "pdf")
+  const choices: ToolId[] = onlyPdfs ? ["pdf", "compress", "ocr"] : onlyImages ? ["convert", "compress", "resize", "ocr"] : ["convert", "compress"]
   const reason = (id: ToolId) =>
     id === "convert"
-      ? kinds.has("pdf") || kinds.has("document") || kinds.has("font")
-        ? "Change the format (PDF, documents and fonts are coming)"
+      ? kinds.has("document") || kinds.has("font")
+        ? "Change the format (documents and fonts are coming)"
         : "Change the format"
       : id === "resize"
         ? "Change the dimensions"
-        : "Make them smaller"
+        : id === "pdf"
+          ? "Merge, split, organise, sign, protect"
+          : id === "ocr"
+            ? "Pull out the text"
+            : n === 1
+              ? "Make it smaller"
+              : "Make them smaller"
   return (
     <Dialog.Root open={!!pending} onOpenChange={(o) => !o && onClose()}>
       <Dialog.Portal>
         <Dialog.Backdrop className="fixed inset-0 z-50 bg-paper/70 backdrop-blur-sm transition-opacity duration-200 data-[ending-style]:opacity-0 data-[starting-style]:opacity-0" />
-        <Dialog.Popup className="fixed top-1/2 left-1/2 z-50 w-[min(560px,calc(100vw-32px))] -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-card p-7 shadow-float outline-none transition-[opacity,scale] duration-200 ease-out-quint data-[ending-style]:scale-[0.98] data-[ending-style]:opacity-0 data-[starting-style]:scale-[0.98] data-[starting-style]:opacity-0">
+        <Dialog.Popup className="on-card fixed top-1/2 left-1/2 z-50 w-[min(560px,calc(100vw-32px))] -translate-x-1/2 -translate-y-1/2 rounded-2xl bg-card p-7 shadow-float outline-none transition-[opacity,scale] duration-200 ease-out-quint data-[ending-style]:scale-[0.98] data-[ending-style]:opacity-0 data-[starting-style]:scale-[0.98] data-[starting-style]:opacity-0">
           <Dialog.Title className="label text-ink-4">
             {n} {n === 1 ? "file" : "files"} · {[...kinds].join(", ")}
           </Dialog.Title>

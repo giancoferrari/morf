@@ -202,30 +202,47 @@ export function RenameScreen() {
                 spellCheck={false}
                 className="chatcn-focus h-14 w-full rounded-lg bg-paper-2 px-4 font-mono text-[20px] text-ink outline-none"
               />
-              <div className="mt-3 flex flex-wrap gap-1.5">
-                {[
-                  ["{name}", "Current name"],
-                  ["{n}", "Number"],
-                  ["{date}", "Today"],
-                ].map(([t, l]) => (
-                  <button
-                    key={t}
-                    onClick={() => patch({ pattern: rules.pattern + (rules.pattern.endsWith(" ") || !rules.pattern ? "" : " ") + t })}
-                    className="chatcn-focus flex h-7 items-baseline gap-1.5 rounded-full bg-paper-2 px-3 text-[12px] text-ink-2 transition-colors hover:bg-paper-3"
-                  >
-                    <span className="font-mono">{t}</span>
-                    <span className="opacity-60">{l}</span>
-                  </button>
-                ))}
-                {[
-                  ["{name}", "Keep"],
-                  ["Photo {n}", "Photo 01…"],
-                  ["{date} {name}", "Dated"],
-                ].map(([p, l]) => (
-                  <button key={l} onClick={() => patch({ pattern: p })} className="chatcn-focus h-7 rounded-full px-3 text-[12px] text-ink-3 transition-colors hover:bg-paper-2 hover:text-ink">
-                    {l}
-                  </button>
-                ))}
+              <div className="mt-3 flex items-start gap-3">
+                <span className="label flex h-7 w-12 shrink-0 items-center text-ink-4">Insert</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    ["{name}", "Current name"],
+                    ["{n}", "Number"],
+                    ["{date}", "Today"],
+                  ].map(([t, l]) => (
+                    <button
+                      key={t}
+                      onClick={() => patch({ pattern: rules.pattern + (rules.pattern.endsWith(" ") || !rules.pattern ? "" : " ") + t })}
+                      className="chatcn-focus inline-flex h-7 items-center rounded-full bg-paper-2 px-3 text-[12px] leading-none text-ink-2 transition-colors hover:bg-paper-3"
+                    >
+                      <span className="flex items-baseline gap-1.5">
+                        <span className="font-mono">{t}</span>
+                        <span className="opacity-60">{l}</span>
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="mt-2 flex items-start gap-3">
+                <span className="label flex h-7 w-12 shrink-0 items-center text-ink-4">Start</span>
+                <div className="flex flex-wrap gap-1.5">
+                  {[
+                    ["{name}", "Original name"],
+                    ["Photo {n}", "Photo 01, 02…"],
+                    ["{date} {name}", "Date and name"],
+                  ].map(([p, l]) => (
+                    <button
+                      key={l}
+                      onClick={() => patch({ pattern: p })}
+                      className={cn(
+                        "chatcn-focus inline-flex h-7 items-center rounded-full px-3 text-[12px] leading-none ring-1 ring-hair-strong transition-colors hover:bg-paper-2 hover:text-ink",
+                        rules.pattern === p ? "bg-paper-2 text-ink" : "text-ink-3",
+                      )}
+                    >
+                      {l}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div className="mt-6 divide-y divide-hair border-t border-hair">

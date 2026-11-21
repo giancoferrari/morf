@@ -94,7 +94,7 @@ export function ConvertScreen({ dragging }: { dragging: boolean }) {
       </ToolHeader>
 
       {items.length === 0 ? (
-        <DropArea dragging={dragging} kinds={["Audio", "Video", "Images"]} onPaths={(p) => void addPaths("convert", p)} />
+        <DropArea shellHint dragging={dragging} kinds={["Audio", "Video", "Images"]} onPaths={(p) => void addPaths("convert", p)} />
       ) : (
         <div className="grid min-h-0 flex-1 grid-cols-12 gap-x-5 border-t border-hair">
           {/* Files */}

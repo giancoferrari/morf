@@ -108,6 +108,18 @@ fn model_path(app: &AppHandle, m: &ModelInfo) -> Result<PathBuf> {
     Ok(models_dir(app)?.join(m.file))
 }
 
+/// Speech models on disk: (id, name, size in bytes).
+pub fn downloaded_models(app: &AppHandle) -> Vec<(&'static str, &'static str, u64)> {
+    MODELS
+        .iter()
+        .filter_map(|m| {
+            let p = model_path(app, m).ok()?;
+            let len = std::fs::metadata(&p).ok().filter(|md| md.is_file())?.len();
+            Some((m.id, m.name, len))
+        })
+        .collect()
+}
+
 #[derive(Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ModelState {

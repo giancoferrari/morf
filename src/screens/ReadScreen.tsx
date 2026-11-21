@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from "react"
 import type { Worker as TessWorker } from "tesseract.js"
 import { ToolHeader } from "@/components/files"
+import { FitText } from "@/components/FitText"
 import { Select } from "@/components/options"
 import { Button } from "@/components/ui/button"
 import { files as fileApi, onWindowDrop, pickFiles } from "@/lib/engine"
+import { takeHandoff } from "@/lib/handoff"
 import { loadJSON, saveJSON } from "@/lib/prefs"
 import { announceSaved } from "@/lib/saved"
 import { basename, cn, extname } from "@/lib/utils"
@@ -70,9 +72,16 @@ async function pdfPages(bytes: ArrayBuffer, onPage: (i: number, n: number) => vo
   return { text: texts.join("\n\n"), images }
 }
 
+const kept: { source: { path: string; url: string | null } | null; text: string } = { source: null, text: "" }
+
 export function ReadScreen() {
-  const [source, setSource] = useState<{ path: string; url: string | null } | null>(null)
-  const [text, setText] = useState("")
+  const [source, setSource] = useState<{ path: string; url: string | null } | null>(() => kept.source)
+  const [text, setText] = useState(() => kept.text)
+  // Kept for the session, so the text is still here after a trip to another tool.
+  useEffect(() => {
+    kept.source = source
+    kept.text = text
+  }, [source, text])
   const [busy, setBusy] = useState<string | null>(null)
   const [progress, setProgress] = useState(0)
   const [lang, setLang] = useState<string>(() => loadJSON("read.lang", "eng"))
@@ -117,6 +126,13 @@ export function ReadScreen() {
       if (id === run.current) setBusy(null)
     }
   }
+
+  // A file handed over from the index or the right-click menu.
+  useEffect(() => {
+    const [waiting] = takeHandoff("ocr")
+    if (waiting) void recognize(waiting)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     let off: (() => void) | undefined
@@ -188,7 +204,9 @@ export function ReadScreen() {
           {source?.url ? (
             <img src={source.url} alt="" className="anim-fade min-h-0 flex-1 rounded-xl object-contain object-top" />
           ) : source ? (
-            <p className="display text-[clamp(40px,4.5vw,64px)]">{basename(source.path)}</p>
+            <FitText className="display anim-fade" max={64} min={22} title={source.path}>
+              {basename(source.path)}
+            </FitText>
           ) : (
             <p className={cn("display text-[clamp(52px,6.5vw,104px)] transition-colors", dragging ? "text-ink" : "text-ghost")}>{dragging ? "Let go" : "Drop a picture or PDF"}</p>
           )}

@@ -67,6 +67,18 @@
     },
     "macOS": {
       "minimumSystemVersion": "13.0"
+    },
+    "createUpdaterArtifacts": true
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEUxQkUxRDc0RTVEQTk5OUEKUldTYW1kcmxkQjIrNGZtRnFzMWZ2RjUrTDM3cG50VXlkZ1V1UEVha2hISnA3UlNOb2ZqVTI3WnUK",
+      "endpoints": [
+        "https://github.com/giancoferrari/morf/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
     }
   }
 }

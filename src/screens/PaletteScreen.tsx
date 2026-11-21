@@ -4,16 +4,12 @@ import { ToolHeader } from "@/components/files"
 import { Range } from "@/components/options"
 import { Button } from "@/components/ui/button"
 import { contrast, distinctPalette, formats, hex, parseHex, shades, type RGB } from "@/lib/color"
-import { files as fileApi, onWindowDrop, pickFiles } from "@/lib/engine"
+import { canPickScreen, files as fileApi, onWindowDrop, pickFiles, pickScreenColour } from "@/lib/engine"
 import { loadJSON, saveJSON } from "@/lib/prefs"
 import { announceSaved } from "@/lib/saved"
 import { cn } from "@/lib/utils"
 
-declare global {
-  interface Window {
-    EyeDropper?: new () => { open: () => Promise<{ sRGBHex: string }> }
-  }
-}
+const IMAGE_EXTS = ["jpg", "jpeg", "png", "webp", "heic", "heif", "avif", "gif", "bmp", "tif", "tiff"]
 
 const WHITE: RGB = [255, 255, 255]
 const BLACK: RGB = [0, 0, 0]
@@ -52,15 +48,21 @@ export function PaletteScreen() {
       })
   }
 
+  const [pickError, setPickError] = useState<string | null>(null)
   const pick = async () => {
-    if (!window.EyeDropper) return
+    setPickError(null)
     try {
-      const r = await new window.EyeDropper().open()
-      const rgb = parseHex(r.sRGBHex)
+      const h = await pickScreenColour()
+      const rgb = h ? parseHex(h) : null
       if (rgb) choose(rgb)
-    } catch {
-      /* cancelled */
+    } catch (e) {
+      setPickError(String(e))
     }
+  }
+
+  const chooseImage = async () => {
+    const [p] = await pickFiles([{ name: "Images", extensions: IMAGE_EXTS }])
+    if (p) void loadImage(p)
   }
 
   const loadImage = async (path: string) => {
@@ -134,11 +136,11 @@ export function PaletteScreen() {
 
       <div className="grid min-h-0 flex-1 grid-cols-12 gap-x-5 border-t border-hair">
         {/* The current colour */}
-        <section className="scroll-quiet col-span-6 min-h-0 overflow-y-auto pl-5 pb-8">
+        <section className="scroll-quiet col-span-6 min-h-0 overflow-y-auto pr-5 pl-5 pb-8">
           <div className="mt-5 flex aspect-[16/9] w-full flex-col justify-between rounded-2xl p-6 transition-colors duration-300" style={{ background: hex(color), color: textOn }}>
             <div className="flex items-center justify-between">
               <span className="label opacity-80">Colour</span>
-              <Button size="md" variant="subtle" onClick={() => void pick()} disabled={!window.EyeDropper} className="bg-black/10 text-current hover:bg-black/20">
+              <Button size="md" variant="subtle" onClick={() => void pick()} disabled={!canPickScreen} className="bg-black/10 text-current hover:bg-black/20">
                 <Pipette /> Pick from screen
               </Button>
             </div>
@@ -155,6 +157,7 @@ export function PaletteScreen() {
               aria-label="Hex colour"
             />
           </div>
+          {pickError ? <p className="mt-2 text-[13px] text-signal">{pickError}</p> : null}
 
           <ul className="mt-4 flex flex-col">
             {fmts.map((f) => (
@@ -220,15 +223,11 @@ export function PaletteScreen() {
         <section className={cn("scroll-quiet col-span-6 min-h-0 overflow-y-auto border-l border-hair px-5 pb-8 transition-colors", dragging && "bg-paper-2")}>
           <div className="label flex items-center justify-between py-3 text-ink-4">
             <span>From a picture</span>
-            <button
-              className="focus-ring transition-colors hover:text-ink"
-              onClick={async () => {
-                const [p] = await pickFiles()
-                if (p) void loadImage(p)
-              }}
-            >
-              Choose
-            </button>
+            {image ? (
+              <button className="focus-ring transition-colors hover:text-ink" onClick={() => void chooseImage()}>
+                Choose another
+              </button>
+            ) : null}
           </div>
           {image ? (
             <>
@@ -250,7 +249,7 @@ export function PaletteScreen() {
               </div>
               <div className="mt-5 flex items-center gap-4">
                 <span className="label text-ink-4">Colours</span>
-                <Range aria-label="Number of colours" value={count} min={3} max={12} onChange={setCount} />
+                <Range aria-label="Number of colours" value={count} min={3} max={12} onChange={setCount} valueAlign="start" />
               </div>
               <div className="mt-5 flex flex-wrap gap-2">
                 <Button size="md" variant="solid" onClick={() => void savePaletteImage()} disabled={!palette.length}>
@@ -265,7 +264,15 @@ export function PaletteScreen() {
               </div>
             </>
           ) : (
-            <p className={cn("display pt-6 text-[clamp(48px,6vw,88px)] transition-colors", dragging ? "text-ink" : "text-ghost")}>{dragging ? "Let go" : "Drop a picture"}</p>
+            <div className="flex flex-col gap-6 pt-6">
+              <p className={cn("display text-[clamp(48px,6vw,88px)] transition-colors", dragging ? "text-ink" : "text-ghost")}>{dragging ? "Let go" : "Drop a picture"}</p>
+              <div className="flex flex-wrap items-center gap-3">
+                <Button size="lg" variant="solid" onClick={() => void chooseImage()}>
+                  Choose file
+                </Button>
+                <span className="label text-ink-4">JPEG · PNG · WebP · HEIC</span>
+              </div>
+            </div>
           )}
         </section>
       </div>
