@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Morf — the small jobs files need</title>
+    <meta name="description" content="Convert, compress, dictate and more. A free, open-source app for Windows and macOS. Everything happens on your computer." />
+    <meta property="og:title" content="Morf" />
+    <meta property="og:description" content="Convert, compress, dictate and more. Free, open source, and nothing leaves your computer." />
+    <meta property="og:image" content="/assets/og.png" />
+    <meta name="theme-color" content="#f6f5f1" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#121211" media="(prefers-color-scheme: dark)" />
+    <link rel="icon" href="/assets/favicon.png" />
+    <link rel="preload" href="/assets/fonts/inter-tight-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <header class="bar">
+      <a class="wordmark" href="/" aria-label="Morf, home">
+        <span class="mark" aria-hidden="true"></span>
+        <span>morf</span>
+      </a>
+      <nav class="label">
+        <a href="#tools">Tools</a>
+        <a href="https://github.com/giancoferrari/morf">Source</a>
+        <a href="#download" class="ink">Download</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero">
+        <p class="label muted rise">Free · open source · Windows and macOS</p>
+        <h1 class="display rise d1">The small jobs<br />files need.</h1>
+        <div class="hero-foot rise d2">
+          <p class="lede">Convert, compress, dictate, make QR codes and more, in one quiet app. Everything happens on your computer: no accounts, no uploads.</p>
+          <div class="cta" data-downloads>
+            <a class="pill solid" data-dl="primary" href="https://github.com/giancoferrari/morf/releases/latest">Download for Windows</a>
+            <a class="pill" data-dl="secondary" href="https://github.com/giancoferrari/morf/releases/latest">Download for Mac</a>
+          </div>
+        </div>
+      </section>
+
+      <section class="film rise d3" aria-label="Morf in use">
+        <video src="/assets/morf.mp4" poster="/assets/poster.jpg" autoplay muted loop playsinline preload="metadata"></video>
+      </section>
+
+      <section class="index" id="tools">
+        <div class="index-head">
+          <p class="label muted">Twelve tools</p>
+          <p class="side">The four you'll use most, and eight more for the rest.</p>
+        </div>
+        <ol class="tools">
+          <li class="main"><span class="name">Convert<sup>(28)</sup></span><span class="blurb">Audio, video and images into any other format. Batches and hardware encoding.</span></li>
+          <li class="main"><span class="name">Dictate<sup>(4)</sup></span><span class="blurb">Hold a shortcut, speak, and your words are typed into any app.</span></li>
+          <li class="main"><span class="name">Compress<sup>(4)</sup></span><span class="blurb">Videos, audio, photos and PDFs a fraction of the size, or under a limit.</span></li>
+          <li class="main"><span class="name">QR<sup>(5)</sup></span><span class="blurb">Codes for links, Wi-Fi and contacts, or read one from a picture.</span></li>
+          <li><span class="name">Count</span><span class="blurb">Words, reading time and a private grammar check.</span></li>
+          <li><span class="name">PDF</span><span class="blurb">Merge, split, organise, sign and protect.</span></li>
+          <li><span class="name">Cutout</span><span class="blurb">Remove the background from a photo.</span></li>
+          <li><span class="name">Read</span><span class="blurb">Pull the text out of pictures and scans.</span></li>
+          <li><span class="name">Resize</span><span class="blurb">Exact sizes, with presets for social and web.</span></li>
+          <li><span class="name">Rename</span><span class="blurb">Hundreds of files at once, with undo.</span></li>
+          <li><span class="name">Palette</span><span class="blurb">Pick any colour on screen, or from a picture.</span></li>
+          <li><span class="name">Compare</span><span class="blurb">See exactly what changed between two texts.</span></li>
+        </ol>
+      </section>
+
+      <section class="promises">
+        <div><p class="label">01</p><h2>Nothing uploaded</h2><p>Files never leave your computer. Models download once, when you ask.</p></div>
+        <div><p class="label">02</p><h2>No account</h2><p>Open it and use it. No sign-up, no analytics, no tracking.</p></div>
+        <div><p class="label">03</p><h2>Free for good</h2><p>Open source under the GPL. Updates install from inside the app.</p></div>
+      </section>
+
+      <section class="download" id="download">
+        <h2 class="display">Get Morf.</h2>
+        <div class="platforms">
+          <div class="platform">
+            <p class="label muted">Windows 10 and 11</p>
+            <a class="pill solid" data-dl="windows" href="https://github.com/giancoferrari/morf/releases/latest">Download for Windows</a>
+            <p class="note" data-size="windows">Installer · about 75 MB</p>
+          </div>
+          <div class="platform">
+            <p class="label muted">macOS 13 or later</p>
+            <a class="pill solid" data-dl="mac-arm" href="https://github.com/giancoferrari/morf/releases/latest">Download for Mac</a>
+            <p class="note">Apple Silicon. <a data-dl="mac-intel" href="https://github.com/giancoferrari/morf/releases/latest">Intel Mac?</a></p>
+          </div>
+        </div>
+        <div class="first-open">
+          <p class="label muted">Opening it the first time</p>
+          <p><strong>Windows:</strong> if it says it protected your PC, choose More info, then Run anyway.</p>
+          <p><strong>Mac:</strong> open Morf once, then go to System Settings → Privacy &amp; Security and choose Open Anyway.</p>
+          <p class="muted">Both appear because Morf isn't signed by a paid certificate yet. After that, it updates itself.</p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="foot label muted">
+      <span>Morf <span data-version>0.3.0</span></span>
+      <span>GPL-3.0</span>
+      <a href="https://github.com/giancoferrari/morf">GitHub</a>
+      <a href="https://github.com/giancoferrari/morf/releases">All releases</a>
+    </footer>
+
+    <script src="/main.js" defer></script>
+  </body>
+</html>

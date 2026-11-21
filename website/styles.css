@@ -1,0 +1,418 @@
+/* Morf's site, on the app's own tokens: warm paper, black ink, one grey ramp. */
+
+@font-face {
+  font-family: "Inter Tight";
+  src: url("/assets/fonts/inter-tight-latin-wght-normal.woff2") format("woff2");
+  font-weight: 100 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Geist Mono";
+  src: url("/assets/fonts/geist-mono-latin-wght-normal.woff2") format("woff2");
+  font-weight: 100 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Instrument Serif";
+  src: url("/assets/fonts/instrument-serif-latin-400-normal.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+
+:root {
+  --paper: oklch(0.973 0.004 90);
+  --paper-2: oklch(0.955 0.005 90);
+  --ink: oklch(0.17 0.004 90);
+  --ink-2: oklch(0.36 0.004 90);
+  --ink-3: oklch(0.55 0.005 90);
+  --ink-4: oklch(0.7 0.005 90);
+  --ghost: oklch(0.885 0.005 90);
+  --hair: oklch(0.17 0.004 90 / 0.1);
+  --card: oklch(0.99 0.002 90);
+  --ease: cubic-bezier(0.23, 1, 0.32, 1);
+  --gutter: clamp(16px, 2.2vw, 28px);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --paper: oklch(0.155 0.003 90);
+    --paper-2: oklch(0.2 0.003 90);
+    --ink: oklch(0.955 0.004 90);
+    --ink-2: oklch(0.8 0.004 90);
+    --ink-3: oklch(0.62 0.005 90);
+    --ink-4: oklch(0.48 0.005 90);
+    --ghost: oklch(0.28 0.004 90);
+    --hair: oklch(1 0 0 / 0.08);
+    --card: oklch(0.19 0.003 90);
+    color-scheme: dark;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+html {
+  -webkit-text-size-adjust: 100%;
+}
+body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: "Inter Tight", ui-sans-serif, system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+}
+a {
+  color: inherit;
+  text-decoration: none;
+}
+.label {
+  font-family: "Geist Mono", ui-monospace, monospace;
+  font-size: 11px;
+  line-height: 14px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.muted {
+  color: var(--ink-4);
+}
+.display {
+  font-weight: 560;
+  letter-spacing: -0.045em;
+  line-height: 0.92;
+  margin: 0;
+}
+
+/* Bar */
+.bar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px var(--gutter);
+  background: color-mix(in oklch, var(--paper) 86%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+.wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 500;
+  font-size: 19px;
+  letter-spacing: -0.035em;
+  line-height: 1;
+}
+.mark {
+  display: inline-block;
+  height: 15px;
+  aspect-ratio: 320 / 233;
+  background: currentColor;
+  -webkit-mask: url("/assets/morf-mark.png") center / contain no-repeat;
+  mask: url("/assets/morf-mark.png") center / contain no-repeat;
+}
+.bar nav {
+  display: flex;
+  gap: 22px;
+  color: var(--ink-3);
+}
+.bar nav a {
+  transition: color 150ms;
+}
+.bar nav a:hover,
+.bar nav .ink {
+  color: var(--ink);
+}
+
+/* Hero */
+.hero {
+  padding: clamp(48px, 9vw, 120px) var(--gutter) clamp(32px, 5vw, 56px);
+}
+.hero h1 {
+  margin-top: 22px;
+  font-size: clamp(54px, 11.5vw, 184px);
+}
+.hero-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 28px 48px;
+  margin-top: clamp(28px, 4vw, 48px);
+}
+.lede {
+  max-width: 40ch;
+  margin: 0;
+  font-size: clamp(17px, 1.5vw, 20px);
+  line-height: 1.45;
+  letter-spacing: -0.01em;
+  color: var(--ink-2);
+}
+.cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 46px;
+  padding: 0 24px;
+  border-radius: 999px;
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  background: var(--paper-2);
+  color: var(--ink);
+  transition: transform 120ms var(--ease), opacity 150ms, background-color 150ms;
+}
+.pill:hover {
+  background: var(--ghost);
+}
+.pill:active {
+  transform: scale(0.97);
+}
+.pill.solid {
+  background: var(--ink);
+  color: var(--paper);
+}
+.pill.solid:hover {
+  opacity: 0.86;
+}
+a:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+.pill:focus-visible {
+  border-radius: 999px;
+}
+
+/* Film */
+.film {
+  padding: 0 var(--gutter);
+}
+.film video {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: clamp(10px, 1.4vw, 18px);
+  background: var(--paper-2);
+  box-shadow:
+    0 0 0 1px var(--hair),
+    0 30px 60px -30px oklch(0 0 0 / 0.35);
+  object-fit: cover;
+}
+
+/* Tool index, like the app's: a giant column of names, the main four in ink */
+.index {
+  padding: clamp(72px, 10vw, 140px) var(--gutter) 0;
+}
+.index-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 24px;
+  border-bottom: 1px solid var(--hair);
+  padding-bottom: 14px;
+}
+.index-head .side {
+  margin: 0;
+  max-width: 34ch;
+  text-align: right;
+  font-size: 14px;
+  color: var(--ink-3);
+}
+.tools {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.tools li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 0.9fr);
+  align-items: end;
+  gap: 24px;
+  border-bottom: 1px solid var(--hair);
+  padding: 6px 0 8px;
+}
+.tools .name {
+  font-weight: 560;
+  letter-spacing: -0.045em;
+  line-height: 1;
+  font-size: clamp(44px, 7vw, 108px);
+  color: var(--ghost);
+  transition: color 180ms var(--ease);
+}
+.tools .main .name {
+  color: var(--ink);
+}
+.tools li:hover .name {
+  color: var(--ink);
+}
+.tools sup {
+  font-family: "Instrument Serif", ui-serif, Georgia, serif;
+  font-weight: 400;
+  letter-spacing: 0;
+  font-size: 0.24em;
+  line-height: 0;
+  vertical-align: top;
+  position: relative;
+  top: 0.75em;
+  margin-left: 0.1em;
+}
+.tools .blurb {
+  font-size: 15px;
+  line-height: 1.35;
+  color: var(--ink-3);
+  max-width: 38ch;
+  padding-bottom: 0.55em;
+}
+
+/* Promises */
+.promises {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0 var(--gutter);
+  padding: clamp(72px, 10vw, 140px) var(--gutter) 0;
+}
+.promises > div {
+  border-top: 1px solid var(--hair);
+  padding-top: 16px;
+}
+.promises .label {
+  color: var(--ink-4);
+  margin: 0;
+}
+.promises h2 {
+  margin: 28px 0 8px;
+  font-size: clamp(24px, 2.4vw, 32px);
+  font-weight: 560;
+  letter-spacing: -0.035em;
+  line-height: 1.05;
+}
+.promises p:last-child {
+  margin: 0;
+  color: var(--ink-3);
+  max-width: 34ch;
+}
+
+/* Download */
+.download {
+  padding: clamp(80px, 11vw, 160px) var(--gutter) clamp(56px, 8vw, 100px);
+}
+.download h2 {
+  font-size: clamp(56px, 10vw, 160px);
+}
+.platforms {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--gutter);
+  margin-top: clamp(32px, 4vw, 56px);
+}
+.platform {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 14px;
+  border-top: 1px solid var(--hair);
+  padding-top: 16px;
+}
+.platform .label {
+  margin: 0;
+}
+.note {
+  margin: 0;
+  font-size: 14px;
+  color: var(--ink-3);
+}
+.note a {
+  text-decoration: underline;
+  text-decoration-color: var(--ink-4);
+  text-underline-offset: 3px;
+}
+.first-open {
+  margin-top: clamp(40px, 5vw, 64px);
+  max-width: 62ch;
+  font-size: 15px;
+  color: var(--ink-2);
+}
+.first-open p {
+  margin: 0 0 8px;
+}
+.first-open .label {
+  margin-bottom: 14px;
+}
+.first-open strong {
+  font-weight: 560;
+  color: var(--ink);
+}
+
+.foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 28px;
+  padding: 22px var(--gutter) 28px;
+  border-top: 1px solid var(--hair);
+}
+.foot a:hover {
+  color: var(--ink);
+}
+
+/* Motion: short, calm, and off for people who ask */
+.rise {
+  animation: rise 700ms var(--ease) both;
+}
+.d1 {
+  animation-delay: 60ms;
+}
+.d2 {
+  animation-delay: 140ms;
+}
+.d3 {
+  animation-delay: 220ms;
+}
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rise {
+    animation: none;
+  }
+}
+
+/* Phones */
+@media (max-width: 720px) {
+  .bar nav a:not(.ink) {
+    display: none;
+  }
+  .tools li {
+    grid-template-columns: 1fr;
+    gap: 2px;
+    padding: 10px 0 12px;
+  }
+  .promises,
+  .platforms {
+    grid-template-columns: 1fr;
+    gap: 36px;
+  }
+  .index-head .side {
+    display: none;
+  }
+  .cta .pill {
+    flex: 1 1 auto;
+  }
+}
