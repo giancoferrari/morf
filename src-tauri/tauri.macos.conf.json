@@ -1,0 +1,21 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Morf",
+        "width": 1320,
+        "height": 840,
+        "minWidth": 1040,
+        "minHeight": 680,
+        "center": true,
+        "decorations": true,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true,
+        "trafficLightPosition": { "x": 20, "y": 22 },
+        "dragDropEnabled": true
+      }
+    ]
+  }
+}

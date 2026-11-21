@@ -1,0 +1,16 @@
+name: An idea for Morf
+description: A format, a tool, or something that would make Morf nicer to use.
+labels: [idea]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like Morf to do?
+      description: Tell us the job you're trying to get done, not just the feature.
+    validations:
+      required: true
+  - type: textarea
+    id: now
+    attributes:
+      label: How do you do it today?
+      description: Another app, a website, a command? That helps us get it right.
