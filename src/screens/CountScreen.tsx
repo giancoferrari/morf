@@ -173,7 +173,7 @@ export function CountScreen() {
               min={0}
               step={50}
               value={goal || ""}
-              placeholder="—"
+              placeholder="None"
               onChange={(e) => {
                 const v = Math.max(0, Number(e.target.value) || 0)
                 setGoal(v)

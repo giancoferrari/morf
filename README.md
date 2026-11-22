@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/giancoferrari/morf/releases/latest/download/Morf_0.2.0_x64-setup.exe"><strong>Download for Windows</strong></a>
+  <a href="https://morf.click"><strong>Download for Windows and Mac</strong></a>
   &nbsp;·&nbsp;
   <a href="https://github.com/giancoferrari/morf/releases">All releases</a>
   &nbsp;·&nbsp;
@@ -22,7 +22,7 @@
 
 <p align="center">
   <img alt="Latest release" src="https://img.shields.io/github/v/release/giancoferrari/morf?style=flat-square&color=111111&label=release">
-  <img alt="Platform" src="https://img.shields.io/badge/windows-10%20%7C%2011-111111?style=flat-square">
+  <img alt="Platform" src="https://img.shields.io/badge/windows%20%7C%20macOS-111111?style=flat-square">
   <img alt="Licence" src="https://img.shields.io/badge/licence-GPL--3.0-111111?style=flat-square">
   <img alt="Built with Tauri" src="https://img.shields.io/badge/built%20with-Tauri%202-111111?style=flat-square">
 </p>
@@ -99,15 +99,16 @@ have their embedded pictures resized and re-encoded; text and vector art are lef
 
 ## Install
 
-1. Download **[Morf_0.2.0_x64-setup.exe](https://github.com/giancoferrari/morf/releases/latest/download/Morf_0.2.0_x64-setup.exe)** (ffmpeg included).
-2. Run it. It installs for your user only, so no administrator prompt.
-3. Windows SmartScreen may say it doesn't recognise the app, because the installer isn't code-signed yet. Choose **More info → Run anyway**.
+1. Download Morf from **[morf.click](https://morf.click)**, or pick a file from the [latest release](https://github.com/giancoferrari/morf/releases/latest): `Morf_<version>_x64-setup.exe` for Windows, `_aarch64.dmg` for Apple Silicon Macs, `_x64.dmg` for Intel Macs. ffmpeg is included.
+2. Run it. On Windows it installs for your user only, so no administrator prompt.
+3. The first time, your computer may warn you, because Morf isn't signed by a paid certificate yet. On Windows choose **More info → Run anyway**; on a Mac open **System Settings → Privacy & Security** and choose **Open Anyway**.
+
+After that, Morf updates itself: it tells you when a new version is out and installs it for you.
 
 To add **Convert with Morf** and **Compress with Morf** to Explorer's right-click menu, open **Settings → Output** in Morf and switch it on. On Windows 11 the items are under **Show more options**.
 
 To dictate, open **Dictate**, download a model (Parakeet V3 is a good start, 740 MB) and switch it on. With dictation on, closing the window keeps Morf in the tray so the shortcut keeps working.
 
-A macOS version is planned.
 
 ## Keyboard
 
